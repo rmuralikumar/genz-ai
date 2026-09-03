@@ -45,7 +45,3 @@ dev.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# prompt and agent instructions
-agent.md
-prompt.md
