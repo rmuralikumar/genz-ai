@@ -1,0 +1,1 @@
+{\n  \"version\": \"0.2.0\",\n  \"configurations\": [\n    {\n      \"name\": \"GENZ-AI: Next.js Dev (localhost:3000)\",\n      \"type\": \"node-terminal\",\n      \"request\": \"launch\",\n      \"command\": \"npm run dev\"\n    }\n  ]\n}

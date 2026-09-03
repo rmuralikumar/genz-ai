@@ -1,0 +1,99 @@
+// GENZ-AI Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  conversations Conversation[]
+  settings      UserSetting?
+  usageRecords  UsageRecord[]
+
+  @@map("users")
+}
+
+model Conversation {
+  id         String    @id @default(cuid())
+  title      String    @default("New Chat")
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model      String    @default("genz-fast")
+  isArchived Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  messages   Message[]
+
+  @@index([userId, updatedAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // "user" | "assistant" | "system"
+  content        String
+  model          String?
+  tokensUsed     Int?
+  createdAt      DateTime     @default(now())
+
+  attachments    Attachment[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  messageId String?
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename  String
+  mimeType  String
+  size      Int
+  url       String
+  createdAt DateTime @default(now())
+
+  @@map("attachments")
+}
+
+model UserSetting {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme        String   @default("dark") // "dark" | "light" | "system"
+  defaultModel String   @default("genz-fast")
+  enterToSend  Boolean  @default(true)
+  autoScroll   Boolean  @default(true)
+  compactMode  Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model UsageRecord {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  model            String
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("usage_records")
+}
