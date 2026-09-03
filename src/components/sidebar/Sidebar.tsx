@@ -12,10 +12,10 @@ import {
   X,
   Settings,
   LogOut,
-  Bot,
   User as UserIcon,
 } from "lucide-react";
 import { ConversationItem, UserProfile } from "@/types/chat";
+import { Logo } from "@/components/layout/Logo";
 
 interface SidebarProps {
   conversations: ConversationItem[];
@@ -207,14 +207,7 @@ export function Sidebar({
       {/* Top Header & Brand */}
       <div className="p-3.5 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between mb-3.5 px-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <Bot className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-              GENZ-AI
-            </span>
-          </div>
+          <Logo size="sm" showText={true} />
         </div>
 
         {/* New Chat Button */}

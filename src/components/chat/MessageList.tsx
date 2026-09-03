@@ -10,8 +10,10 @@ import {
   AlertTriangle,
   RotateCcw,
   ShieldAlert,
+  Bot,
 } from "lucide-react";
 import { ChatMessage, ChatStatus, ChatErrorInfo } from "@/types/chat";
+import { getModelConfig } from "@/lib/ai/models";
 import { MessageItem } from "./MessageItem";
 
 interface MessageListProps {
@@ -24,6 +26,7 @@ interface MessageListProps {
   onSelectStarter?: (prompt: string) => void;
   onEditMessage?: (content: string) => void;
   autoScrollEnabled?: boolean;
+  currentModel?: string;
 }
 
 const STARTER_PROMPTS = [
@@ -57,7 +60,9 @@ export function MessageList({
   onSelectStarter,
   onEditMessage,
   autoScrollEnabled = true,
+  currentModel,
 }: MessageListProps) {
+  const activeModelConfig = getModelConfig(currentModel);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
@@ -172,25 +177,45 @@ export function MessageList({
             );
           })}
 
+          {/* Smooth In-Stream Typing Indicator (when contacting or waiting for first token) */}
+          {(status === "submitting" || (status === "streaming" && !streamingContent)) && (
+            <div className="py-4 sm:py-5 px-3 sm:px-4 md:px-6 bg-[var(--bot-msg-bg)]/40 border-y border-[var(--border-subtle)] flex justify-start animate-in fade-in duration-200">
+              <div className="w-full max-w-3xl flex gap-3 sm:gap-3.5 flex-row justify-start">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-sm ring-1 ring-white/20 shrink-0 select-none">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+                  <div className="flex items-center gap-2 mb-2 select-none flex-wrap">
+                    <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">
+                      GENZ-AI
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-[var(--accent-glow)] text-[var(--accent-primary)] font-medium border border-[var(--accent-primary)]/20 shadow-xs">
+                      <span>{activeModelConfig.name}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 py-1 text-[var(--text-muted)] text-sm">
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce" />
+                    <span className="ml-2 text-xs text-[var(--text-muted)] font-medium">GENZ-AI is thinking...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Active Streaming Message */}
-          {status === "streaming" && (
+          {status === "streaming" && streamingContent && (
             <MessageItem
               message={{
                 id: "streaming-temp-msg",
                 conversationId: "temp",
                 role: "assistant",
-                content: streamingContent || "●",
+                content: streamingContent,
+                model: currentModel,
                 createdAt: new Date(),
               }}
             />
-          )}
-
-          {/* Submitting Loading Indicator */}
-          {status === "submitting" && (
-            <div className="py-4 px-6 flex items-center gap-3 text-xs text-[var(--text-muted)] select-none">
-              <span className="inline-block w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-ping" />
-              <span>Contacting AI model...</span>
-            </div>
           )}
 
           {/* True Error State Card (No fake AI responses) */}

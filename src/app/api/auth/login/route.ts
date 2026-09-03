@@ -7,20 +7,30 @@ import { loginSchema } from "@/lib/validation/auth";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request payload." },
+        { status: 400 }
+      );
+    }
+
     const parsed = loginSchema.safeParse(body);
 
     if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      const message = firstIssue?.message || "Invalid credentials format.";
       return NextResponse.json(
-        { error: "Invalid credentials format" },
+        { error: message },
         { status: 400 }
       );
     }
 
     const { email, password } = parsed.data;
+    const cleanEmail = email.trim().toLowerCase();
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: cleanEmail },
       include: { settings: true },
     });
 
@@ -66,7 +76,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Unable to sign in. Please try again." },
+      { error: "Unable to sign in right now. Please try again." },
       { status: 500 }
     );
   }

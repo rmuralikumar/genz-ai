@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { conversationId, content, model, attachments } = parsed.data;
+  const { conversationId, content, model, attachments, isRetry } = parsed.data;
 
   // Verify conversation ownership
   const conversation = await prisma.conversation.findFirst({
@@ -49,23 +49,33 @@ export async function POST(req: Request) {
 
   const selectedModel = model || conversation.model || "genz-fast";
 
-  // 1. Save user's message
-  await prisma.message.create({
-    data: {
-      conversationId: conversation.id,
-      role: "user",
-      content,
-      model: selectedModel,
-      attachments: attachments && attachments.length > 0 ? {
-        create: attachments.map((att) => ({
-          filename: att.filename,
-          mimeType: att.mimeType,
-          size: att.size,
-          url: att.url,
-        })),
-      } : undefined,
-    },
-  });
+  // 1. Save user's message (skip if isRetry to avoid duplicating the prompt)
+  if (isRetry) {
+    const lastMsg = await prisma.message.findFirst({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: "desc" },
+    });
+    if (lastMsg && lastMsg.role === "assistant") {
+      await prisma.message.delete({ where: { id: lastMsg.id } });
+    }
+  } else {
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        role: "user",
+        content,
+        model: selectedModel,
+        attachments: attachments && attachments.length > 0 ? {
+          create: attachments.map((att) => ({
+            filename: att.filename,
+            mimeType: att.mimeType,
+            size: att.size,
+            url: att.url,
+          })),
+        } : undefined,
+      },
+    });
+  }
 
   // 2. Auto-generate title if this is the first message or titled "New Chat"
   if (conversation.title === "New Chat") {

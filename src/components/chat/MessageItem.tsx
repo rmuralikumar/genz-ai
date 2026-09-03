@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, User, Copy, Check, RotateCcw, FileText, Image as ImageIcon } from "lucide-react";
+import { User, Copy, Check, RotateCcw, FileText, Image as ImageIcon } from "lucide-react";
 import { ChatMessage } from "@/types/chat";
 import { CodeBlock } from "./CodeBlock";
+import { getModelConfig } from "@/lib/ai/models";
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -22,10 +24,24 @@ export function MessageItem({
 }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
+  const modelConfig = !isUser ? getModelConfig(message.model || undefined) : null;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(message.content);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(message.content);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = message.content;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -35,14 +51,14 @@ export function MessageItem({
 
   return (
     <div
-      className={`py-5 px-4 md:px-6 transition-colors ${
+      className={`py-4 sm:py-5 px-3 sm:px-6 transition-colors ${
         isUser
           ? "bg-transparent flex justify-end"
           : "bg-[var(--bot-msg-bg)]/40 border-y border-[var(--border-subtle)] flex justify-start"
       }`}
     >
       <div
-        className={`w-full max-w-3xl flex gap-3.5 ${
+        className={`w-full max-w-3xl flex gap-3 sm:gap-3.5 ${
           isUser ? "flex-row-reverse max-w-2xl" : "flex-row"
         }`}
       >
@@ -53,28 +69,43 @@ export function MessageItem({
               <User className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-sm ring-1 ring-white/20">
-              <Bot className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-md shadow-indigo-500/20 ring-1 ring-white/15 bg-black flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="GENZ-AI"
+                width={32}
+                height={32}
+                priority
+                className="w-full h-full object-cover"
+              />
             </div>
           )}
         </div>
 
         {/* Message Content Body */}
         <div className={`flex-1 min-w-0 ${isUser ? "text-right" : "text-left"}`}>
-          <div className="flex items-center gap-2 mb-1.5 select-none">
+          <div
+            className={`flex items-center gap-2 mb-1.5 select-none ${
+              isUser ? "justify-end" : "justify-start"
+            }`}
+          >
             <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">
               {isUser ? "You" : "GENZ-AI"}
             </span>
-            {message.model && !isUser && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent-glow)] text-[var(--accent-primary)] font-medium">
-                {message.model}
+            {!isUser && modelConfig && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-glow)] text-[var(--accent-primary)] font-medium border border-[var(--accent-primary)]/20">
+                {modelConfig.name}
               </span>
             )}
           </div>
 
           {/* Attachments if present */}
           {message.attachments && message.attachments.length > 0 && (
-            <div className={`flex flex-wrap gap-2 mb-2 ${isUser ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`flex flex-wrap gap-2 mb-2 ${
+                isUser ? "justify-end" : "justify-start"
+              }`}
+            >
               {message.attachments.map((att, i) => (
                 <div
                   key={i}
@@ -104,7 +135,11 @@ export function MessageItem({
                   pre({ children }) {
                     return <>{children}</>;
                   },
-                  code({ className, children, ...props }: React.ComponentPropsWithoutRef<"code">) {
+                  code({
+                    className,
+                    children,
+                    ...props
+                  }: React.ComponentPropsWithoutRef<"code">) {
                     const match = /language-(\w+)/.exec(className || "");
                     const isInline = !match && !String(children).includes("\n");
                     if (isInline) {

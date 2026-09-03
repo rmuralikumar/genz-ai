@@ -12,6 +12,7 @@ interface ComposerProps {
   enterToSend?: boolean;
   modelName?: string;
   initialValue?: string;
+  onCancelEdit?: () => void;
 }
 
 export function Composer({
@@ -21,6 +22,7 @@ export function Composer({
   enterToSend = true,
   modelName = "GENZ Fast",
   initialValue = "",
+  onCancelEdit,
 }: ComposerProps) {
   const [content, setContent] = useState(initialValue);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -77,7 +79,25 @@ export function Composer({
 
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 sm:pb-5 pt-1">
-      <div className="relative rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] focus-within:border-[var(--border-focus)] shadow-lg transition-all">
+      <div className="relative rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] focus-within:border-[var(--border-focus)] shadow-lg transition-all overflow-hidden">
+        {/* Editing banner */}
+        {initialValue && (
+          <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--accent-glow)]/60 border-b border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
+            <span className="font-medium text-[var(--accent-primary)]">Editing previous message</span>
+            <button
+              type="button"
+              onClick={() => {
+                setContent("");
+                onCancelEdit?.();
+              }}
+              className="p-1 hover:text-[var(--text-primary)] rounded transition-colors"
+              title="Cancel edit"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Attachment preview pills */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 p-3 pb-0">

@@ -102,7 +102,11 @@ export function AppShell() {
         const meData = await meRes.json();
         
         let currentUser = meData.user;
-        if (!currentUser) {
+        const isExplicitlyLoggedOut =
+          typeof window !== "undefined" &&
+          localStorage.getItem("genz_logged_out") === "true";
+
+        if (!currentUser && !isExplicitlyLoggedOut) {
           // Auto-provision guest account for seamless instant interaction
           const guestEmail = `guest_${Math.random().toString(36).substring(2, 9)}@genz.ai`;
           const regRes = await fetch("/api/auth/register", {
@@ -279,6 +283,11 @@ export function AppShell() {
       setMessages((prev) => [...prev, userMsg]);
     }
 
+    // Clear any active edit draft
+    if (editingMessageContent) {
+      setEditingMessageContent("");
+    }
+
     setStatus("submitting");
     setStreamingContent("");
 
@@ -294,6 +303,7 @@ export function AppShell() {
           content,
           model: currentModel,
           attachments,
+          isRetry,
         }),
         signal: abortController.signal,
       });
@@ -412,9 +422,9 @@ export function AppShell() {
     if (lastUserIndex === -1) return;
 
     const lastUserMsg = messages[lastUserIndex];
-    // Remove messages after last user message
-    setMessages((prev) => prev.slice(0, lastUserIndex));
-    handleSendMessage(lastUserMsg.content, lastUserMsg.attachments);
+    // Keep up to and including the user message
+    setMessages((prev) => prev.slice(0, lastUserIndex + 1));
+    handleSendMessage(lastUserMsg.content, lastUserMsg.attachments, true);
   };
 
   // Edit user message
@@ -449,6 +459,9 @@ export function AppShell() {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      try {
+        localStorage.setItem("genz_logged_out", "true");
+      } catch {}
       setUser(null);
       setConversations([]);
       handleNewChat();
@@ -516,6 +529,7 @@ export function AppShell() {
           onSelectStarter={(prompt) => handleSendMessage(prompt)}
           onEditMessage={handleEditMessage}
           autoScrollEnabled={settings.autoScroll}
+          currentModel={currentModel}
         />
 
         <Composer
@@ -525,6 +539,7 @@ export function AppShell() {
           enterToSend={settings.enterToSend}
           modelName={currentModel}
           initialValue={editingMessageContent}
+          onCancelEdit={() => setEditingMessageContent("")}
         />
       </main>
 
@@ -544,6 +559,11 @@ export function AppShell() {
         onClose={() => setAuthModalOpen(false)}
         onAuthSuccess={(authUser) => {
           setUser(authUser);
+          setActiveId(undefined);
+          setMessages([]);
+          try {
+            localStorage.removeItem("genz_logged_out");
+          } catch {}
           loadConversations();
           loadUserSettings();
         }}

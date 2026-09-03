@@ -22,6 +22,7 @@ export const chatRequestSchema = z.object({
   content: z.string().min(1, "Message content cannot be empty"),
   model: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(),
+  isRetry: z.boolean().optional(),
 });
 
 export const userSettingsSchema = z.object({
