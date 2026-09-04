@@ -17,6 +17,11 @@ interface GoogleTokenResponse {
   error_description?: string;
 }
 
+interface GoogleOAuthErrorResponse {
+  error?: string;
+  error_description?: string;
+}
+
 interface GoogleUserInfo {
   sub: string;
   email: string;
@@ -74,8 +79,10 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     );
   }
 
-  // Authoritative callback redirect URI matching the authorization initiation URI
-  const redirectUri = `${origin}/auth/callback`;
+  const callbackPath = req.nextUrl.pathname.startsWith("/api/auth/callback")
+    ? "/api/auth/callback"
+    : "/auth/callback";
+  const redirectUri = `${origin}${callbackPath}`;
 
   try {
     // 3. Exchange authorization code for access token
@@ -94,14 +101,40 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     });
 
     if (!tokenResponse.ok) {
-      const tokenError: GoogleTokenResponse = await tokenResponse.json().catch(() => ({}));
-      console.error("Failed to exchange code for token with Google:", tokenError);
+      const responseText = await tokenResponse.text();
+      let tokenError: GoogleOAuthErrorResponse = {};
+      try {
+        tokenError = JSON.parse(responseText);
+      } catch {
+        // Non-JSON response from Google
+      }
+
+      // Safe server-side logging of only:
+      // - HTTP status
+      // - Google error code
+      // - Google error description
+      // - redirect URI being used
+      // - whether required env vars are configured
+      // (NEVER log client secret or tokens)
+      console.error("[Google OAuth Token Exchange Error]", {
+        httpStatus: tokenResponse.status,
+        googleErrorCode: tokenError.error || "unknown",
+        googleErrorDescription: tokenError.error_description || (responseText ? responseText.slice(0, 150) : "none"),
+        redirectUriBeingUsed: redirectUri,
+        requiredEnvVarsConfigured: {
+          clientIdConfigured: Boolean(clientId),
+          clientSecretConfigured: Boolean(clientSecret),
+        },
+      });
 
       let userFriendlyMsg = "Failed to authenticate with Google. Please try again.";
       if (tokenError.error === "redirect_uri_mismatch") {
         userFriendlyMsg = "Google OAuth redirect URI mismatch. Please verify Authorized Redirect URIs in Google Cloud Console.";
       } else if (tokenError.error === "invalid_client") {
-        userFriendlyMsg = "Google OAuth client credentials are invalid or expired.";
+        const desc = tokenError.error_description ? ` (${tokenError.error_description})` : "";
+        userFriendlyMsg = `Google OAuth client credentials are invalid or expired.${desc}`;
+      } else if (tokenError.error_description) {
+        userFriendlyMsg = `Google OAuth error: ${tokenError.error_description}`;
       }
 
       return NextResponse.redirect(

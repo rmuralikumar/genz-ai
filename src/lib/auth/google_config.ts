@@ -8,14 +8,29 @@ export interface GoogleOAuthConfig {
 }
 
 /**
+ * Sanitizes credential strings by stripping:
+ * - Leading/trailing single or double quotes
+ * - Escaped quotes, backslashes, or semicolons
+ * - Zero-width Unicode characters (BOM, ZWSP, etc.)
+ * - Leading/trailing whitespace, newlines, and carriage returns
+ */
+export function cleanCredential(raw?: string): string {
+  if (!raw) return "";
+  let val = raw.trim();
+  val = val.replace(/[\u200B-\u200D\uFEFF]/g, "");
+  val = val.replace(/^["'`\\\s]+|["'`\\\s;]+$/g, "");
+  return val.trim();
+}
+
+/**
  * Server-only helper to load Google OAuth credentials.
  * Checks process.env first, and in development falls back to reading .env / .env.local directly
  * so changes take effect immediately without requiring a dev server restart.
  * NEVER import this file into client-side components.
  */
 export function getGoogleOAuthConfig(): GoogleOAuthConfig {
-  let clientId = (process.env.GOOGLE_CLIENT_ID?.trim() || "").replace(/^["']|["']$/g, "").trim();
-  let clientSecret = (process.env.GOOGLE_CLIENT_SECRET?.trim() || "").replace(/^["']|["']$/g, "").trim();
+  let clientId = cleanCredential(process.env.GOOGLE_CLIENT_ID);
+  let clientSecret = cleanCredential(process.env.GOOGLE_CLIENT_SECRET);
 
   // In development only, if process.env is empty or still holds placeholder values, read directly from .env files
   if (
@@ -43,10 +58,10 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
             const secretMatch = trimmed.match(/^GOOGLE_CLIENT_SECRET\s*=\s*["']?([^"'\r\n]+)["']?/);
 
             if (idMatch?.[1] && (!clientId || clientId.includes("your-google-client-id"))) {
-              clientId = idMatch[1].trim();
+              clientId = cleanCredential(idMatch[1]);
             }
             if (secretMatch?.[1] && (!clientSecret || clientSecret.includes("your-google-client-secret"))) {
-              clientSecret = secretMatch[1].trim();
+              clientSecret = cleanCredential(secretMatch[1]);
             }
           }
         }

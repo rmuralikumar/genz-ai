@@ -27,7 +27,20 @@ export async function GET(req: NextRequest) {
   }
 
   const state = crypto.randomUUID();
-  const redirectUri = `${origin}/auth/callback`;
+  const callbackParam = req.nextUrl.searchParams.get("callback_url");
+  const callbackPath = callbackParam?.startsWith("/api/auth/callback")
+    ? "/api/auth/callback"
+    : "/auth/callback";
+  const redirectUri = `${origin}${callbackPath}`;
+
+  // Safe server-side logging (no secrets logged)
+  console.log("[Google OAuth Initiation]", {
+    redirectUriBeingUsed: redirectUri,
+    requiredEnvVarsConfigured: {
+      hasClientId,
+      hasClientSecret,
+    },
+  });
 
   const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   googleAuthUrl.searchParams.set("client_id", clientId);
