@@ -14,8 +14,8 @@ export interface GoogleOAuthConfig {
  * NEVER import this file into client-side components.
  */
 export function getGoogleOAuthConfig(): GoogleOAuthConfig {
-  let clientId = process.env.GOOGLE_CLIENT_ID?.trim() || "";
-  let clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim() || "";
+  let clientId = (process.env.GOOGLE_CLIENT_ID?.trim() || "").replace(/^["']|["']$/g, "").trim();
+  let clientSecret = (process.env.GOOGLE_CLIENT_SECRET?.trim() || "").replace(/^["']|["']$/g, "").trim();
 
   // In development only, if process.env is empty or still holds placeholder values, read directly from .env files
   if (
@@ -39,15 +39,14 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
             const trimmed = line.trim();
             if (!trimmed || trimmed.startsWith("#")) continue;
 
-            const idPrefix = "GOOGLE_CLIENT_ID=";
-            const secretPrefix = "GOOGLE_CLIENT_SECRET=";
+            const idMatch = trimmed.match(/^GOOGLE_CLIENT_ID\s*=\s*["']?([^"'\r\n]+)["']?/);
+            const secretMatch = trimmed.match(/^GOOGLE_CLIENT_SECRET\s*=\s*["']?([^"'\r\n]+)["']?/);
 
-            if (trimmed.startsWith(idPrefix) && (!clientId || clientId.includes("your-google-client-id"))) {
-              const raw = trimmed.substring(idPrefix.length).trim();
-              clientId = raw.replace(/^["']|["']$/g, "").trim();
-            } else if (trimmed.startsWith(secretPrefix) && (!clientSecret || clientSecret.includes("your-google-client-secret"))) {
-              const raw = trimmed.substring(secretPrefix.length).trim();
-              clientSecret = raw.replace(/^["']|["']$/g, "").trim();
+            if (idMatch?.[1] && (!clientId || clientId.includes("your-google-client-id"))) {
+              clientId = idMatch[1].trim();
+            }
+            if (secretMatch?.[1] && (!clientSecret || clientSecret.includes("your-google-client-secret"))) {
+              clientSecret = secretMatch[1].trim();
             }
           }
         }
