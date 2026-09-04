@@ -253,8 +253,19 @@ export function Sidebar({
         {user ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-              <div className="w-7 h-7 rounded-full bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] flex items-center justify-center text-xs font-bold shrink-0">
-                {user.name ? user.name.slice(0, 2).toUpperCase() : "U"}
+              <div className="w-7 h-7 rounded-full bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name || "User"}
+                    className="w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : user.name ? (
+                  user.name.slice(0, 2).toUpperCase()
+                ) : (
+                  "U"
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
@@ -294,7 +305,7 @@ export function Sidebar({
             className="w-full py-2 px-3 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-center gap-2 transition-colors"
           >
             <UserIcon className="w-4 h-4 text-[var(--accent-primary)]" />
-            <span>Sign In / Register</span>
+            <span>Sign In with Google</span>
           </button>
         )}
       </div>

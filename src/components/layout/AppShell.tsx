@@ -51,6 +51,7 @@ export function AppShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastFailedPromptRef = useRef<{ content: string; attachments?: AttachmentItem[] } | null>(null);
@@ -97,6 +98,26 @@ export function AppShell() {
   // Load User, Settings, and Conversations on Mount
   useEffect(() => {
     async function init() {
+      // Check for OAuth URL query params
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const authSuccess = params.get("auth_success");
+        const authError = params.get("auth_error");
+
+        if (authSuccess) {
+          try {
+            localStorage.removeItem("genz_logged_out");
+          } catch {}
+          setAuthModalOpen(false);
+          setAuthErrorMessage(null);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (authError) {
+          setAuthErrorMessage(decodeURIComponent(authError));
+          setAuthModalOpen(true);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
       try {
         const meRes = await fetch("/api/auth/me");
         const meData = await meRes.json();
@@ -556,7 +577,12 @@ export function AppShell() {
       {/* Authentication Modal */}
       <AuthModal
         isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setAuthErrorMessage(null);
+        }}
+        errorMessage={authErrorMessage}
+        onClearError={() => setAuthErrorMessage(null)}
         onAuthSuccess={(authUser) => {
           setUser(authUser);
           setActiveId(undefined);
