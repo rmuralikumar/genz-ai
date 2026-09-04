@@ -5,6 +5,8 @@ import { hashPassword } from "@/lib/auth/passwords";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { getGoogleOAuthConfig, resolveAppOrigin } from "@/lib/auth/google_config";
 
+export const dynamic = "force-dynamic";
+
 interface GoogleTokenResponse {
   access_token: string;
   id_token?: string;
