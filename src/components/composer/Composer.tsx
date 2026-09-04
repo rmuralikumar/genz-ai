@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { ArrowUp, Square, X, Image as ImageIcon, FileText } from "lucide-react";
+import { ArrowUp, Square, X, FileText, Sparkles } from "lucide-react";
 import { AttachmentItem, ChatStatus } from "@/types/chat";
 import { AttachmentButton } from "./AttachmentButton";
+import { VoiceInputButton } from "./VoiceInputButton";
 
 interface ComposerProps {
   onSendMessage: (content: string, attachments?: AttachmentItem[]) => void;
@@ -26,6 +27,7 @@ export function Composer({
 }: ComposerProps) {
   const [content, setContent] = useState(initialValue);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync initial value when editing
@@ -77,9 +79,67 @@ export function Composer({
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleVoiceTranscription = (text: string) => {
+    setContent((prev) => (prev ? `${prev.trim()} ${text}` : text));
+    textareaRef.current?.focus();
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (res.ok) {
+          const item = await res.json();
+          handleAddAttachment(item);
+        }
+      } catch (err) {
+        console.error("Drop upload failed:", err);
+      }
+    }
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 sm:pb-5 pt-1">
-      <div className="relative rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] focus-within:border-[var(--border-focus)] shadow-lg transition-all overflow-hidden">
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative rounded-2xl bg-[var(--bg-surface)] border transition-all overflow-hidden shadow-lg ${
+          isDragging
+            ? "border-[var(--accent-primary)] ring-2 ring-[var(--accent-primary)]/40 bg-[var(--accent-glow)]/20"
+            : "border-[var(--border-subtle)] focus-within:border-[var(--border-focus)]"
+        }`}
+      >
+        {/* Drag and drop overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-none">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-primary)] animate-pulse">
+              <Sparkles className="w-5 h-5" />
+              <span>Drop files or images here to attach</span>
+            </div>
+          </div>
+        )}
+
         {/* Editing banner */}
         {initialValue && (
           <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--accent-glow)]/60 border-b border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
@@ -107,12 +167,17 @@ export function Composer({
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] shadow-sm animate-in fade-in"
               >
                 {att.mimeType.startsWith("image/") ? (
-                  <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                  <div className="w-4 h-4 rounded overflow-hidden bg-black/40 flex items-center justify-center shrink-0">
+                    <img src={att.url} alt={att.filename} className="w-full h-full object-cover" />
+                  </div>
                 ) : (
-                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 )}
                 <span className="truncate max-w-[140px] font-medium">
                   {att.filename}
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  ({Math.round(att.size / 1024)}KB)
                 </span>
                 <button
                   type="button"
@@ -137,11 +202,15 @@ export function Composer({
           className="w-full px-4 pt-3.5 pb-2 bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] resize-none outline-none text-[15px] leading-relaxed max-h-[200px] overflow-y-auto"
         />
 
-        {/* Bottom Toolbar */}
+        {/* Bottom Toolbar: [ Attach ] [ Mic ] [ Model label ] ... [ Send ] */}
         <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
           <div className="flex items-center gap-1">
             <AttachmentButton
               onAttachmentUploaded={handleAddAttachment}
+              disabled={isGenerating}
+            />
+            <VoiceInputButton
+              onTranscription={handleVoiceTranscription}
               disabled={isGenerating}
             />
             <span className="text-[11px] font-medium text-[var(--text-muted)] px-2 select-none hidden sm:inline-block">

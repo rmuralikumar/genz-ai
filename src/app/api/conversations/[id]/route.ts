@@ -37,7 +37,36 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ conversation });
+    const mappedConversation = {
+      ...conversation,
+      messages: conversation.messages.map((m) => {
+        const imageAttachments = m.attachments?.filter((att) =>
+          att.mimeType?.startsWith("image/")
+        );
+        const images =
+          imageAttachments && imageAttachments.length > 0
+            ? imageAttachments.map((att) => {
+                const cleanName = att.filename.replace(/\.[a-zA-Z0-9]+$/, "").replace(/_/g, " ");
+                return {
+                  url: att.url,
+                  thumbnail: att.url,
+                  title: cleanName,
+                  alt: cleanName,
+                  source: m.model === "genz-search" ? "Photo Search" : "AI Generated",
+                  author: m.model === "genz-search" ? "Wikimedia Commons" : "Pollinations AI",
+                };
+              })
+            : undefined;
+
+        return {
+          ...m,
+          type: images && images.length > 0 ? ("image" as const) : ("text" as const),
+          images,
+        };
+      }),
+    };
+
+    return NextResponse.json({ conversation: mappedConversation });
   } catch (error) {
     console.error("Error fetching conversation details:", error);
     return NextResponse.json(

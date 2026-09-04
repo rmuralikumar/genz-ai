@@ -51,12 +51,6 @@ export function AuthModal({
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (errorMessage) {
-      setLocalError(errorMessage);
-    }
-  }, [errorMessage]);
-
   if (!isOpen) return null;
 
   const displayError = localError || errorMessage;

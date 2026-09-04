@@ -27,13 +27,10 @@ PRIMARY GUIDELINES:
 4. Consistency & Personality:
    - Maintain the same engaging, helpful GENZ-AI personality across all turns of the conversation.
 
-5. Image, Media & File Requests:
-   - When a user asks you to send, generate, or show an image (or any file/media you cannot actually produce), ALWAYS follow this format:
-     1. Clearly and briefly state you can't send images — you're text-based.
-     2. Stay in your defined brand voice (casual, Gen-Z, friendly — but readable, not overly slangy).
-     3. Offer a genuinely useful alternative — e.g. a detailed description, a specific search query, or relevant facts — never a vague "just Google it."
-     4. Keep the response short: 2-3 sentences max.
-     5. Never mix tone mid-response (e.g. don't start casual/slang and end generic-corporate). Keep it consistent from first word to last.
+5. Image, Media & Visual Requests:
+   - Visual and image requests are handled by GENZ-AI's dedicated image engine.
+   - NEVER hallucinate or pretend you are sending or displaying a photo in plain text when you cannot.
+   - Keep answers helpful, accurate, and conversational without fake image announcements.
 
 FEW-SHOT EXAMPLES:
 User: enna panra
@@ -49,17 +46,12 @@ User: machine learning na enna?
 Assistant: Machine Learning-na, computer-ku direct-ah every rule sollama, data-la irundhu patterns learn panna teach panradhu. Simple example-na, neraya cat photos kudutha, adutha photo cat-ah illaya-nu identify panna model learn pannum.
 
 User: epdi irukka?
-Assistant: Super-ah irukken! Nee epdi irukka? Innaiku enna plan? 😄
-
-User: send me an image of a cyber truck
-Assistant: Can't send actual images — I'm text-only for now! But I can describe its futuristic angular design, break down its key specs, or give you a ready-to-use search query. Just say the word 👍
-
-User: generate a picture of sunset over mountains
-Assistant: Can't render pictures directly since I'm text-based! But I can vividly describe the scene, write an AI image generation prompt for Midjourney, or share the best photo spots. Let me know what you'd like 👍`;
+Assistant: Super-ah irukken! Nee epdi irukka? Innaiku enna plan? 😄`;
 
 export interface StreamMessage {
   role: "user" | "assistant" | "system";
   content: string;
+  images?: string[];
 }
 
 export class AiServiceError extends Error {
@@ -93,10 +85,10 @@ export async function createAiStream({
   }
 
   const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
-  if (!lastUserMessage || !lastUserMessage.content.trim()) {
+  if (!lastUserMessage || (!lastUserMessage.content.trim() && (!lastUserMessage.images || lastUserMessage.images.length === 0))) {
     throw new AiServiceError(
       "INVALID_REQUEST",
-      "Message content cannot be empty.",
+      "Message content or image attachment cannot be empty.",
       400
     );
   }
@@ -106,12 +98,13 @@ export async function createAiStream({
   const targetModel =
     process.env.OLLAMA_MODEL || modelConfig.ollamaModel || "gemma3:4b";
 
-  // 3. Prepare Ollama messages with system prompt
+  // 3. Prepare Ollama messages with system prompt & multimodal images
   const ollamaMessages = [
     { role: "system", content: GENZ_SYSTEM_PROMPT },
     ...messages.map((m) => ({
       role: m.role,
-      content: m.content,
+      content: m.content || "Analyze this image.",
+      images: m.images && m.images.length > 0 ? m.images : undefined,
     })),
   ];
 
@@ -133,6 +126,15 @@ export async function createAiStream({
       }),
     });
   } catch (err: unknown) {
+    // If Ollama is not running, check if OpenAI API Key is available as fallback
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        return await createOpenAiFallbackStream(messages, process.env.OPENAI_API_KEY);
+      } catch (openAiErr) {
+        console.error("OpenAI fallback also failed:", openAiErr);
+      }
+    }
+
     console.error("Local Ollama connection failed:", err);
     throw new AiServiceError(
       "OLLAMA_NOT_RUNNING",
@@ -226,4 +228,84 @@ export async function createAiStream({
   });
 }
 
+/**
+ * OpenAI Chat & Vision fallback stream when Ollama is unavailable
+ */
+async function createOpenAiFallbackStream(
+  messages: StreamMessage[],
+  apiKey: string
+): Promise<ReadableStream<Uint8Array>> {
+  const openAiMessages = [
+    { role: "system", content: GENZ_SYSTEM_PROMPT },
+    ...messages.map((m) => {
+      if (m.images && m.images.length > 0) {
+        return {
+          role: m.role,
+          content: [
+            { type: "text", text: m.content || "Describe and analyze this image." },
+            ...m.images.map((img) => ({
+              type: "image_url",
+              image_url: {
+                url: img.startsWith("data:") ? img : `data:image/jpeg;base64,${img}`,
+              },
+            })),
+          ],
+        };
+      }
+      return {
+        role: m.role,
+        content: m.content,
+      };
+    }),
+  ];
 
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: openAiMessages,
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No OpenAI response stream");
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  return new ReadableStream({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+        return;
+      }
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          try {
+            const data = JSON.parse(line.slice(6));
+            const delta = data.choices?.[0]?.delta?.content;
+            if (delta) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: delta })}\n\n`));
+            }
+          } catch {
+            // ignore partial JSON
+          }
+        }
+      }
+    },
+  });
+}

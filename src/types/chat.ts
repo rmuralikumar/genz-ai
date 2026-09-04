@@ -21,11 +21,42 @@ export interface AttachmentItem {
   url: string;
 }
 
+export interface ImageItem {
+  url: string;
+  thumbnail?: string;
+  title: string;
+  source: string;
+  author?: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SearchSource {
+  id: number;
+  title: string;
+  url: string;
+  snippet?: string;
+  source?: string;
+}
+
+export interface ResearchStep {
+  step: number;
+  total: number;
+  title: string;
+  status: "pending" | "in-progress" | "completed";
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
   role: "user" | "assistant" | "system";
   content: string;
+  type?: "text" | "image" | "search" | "research" | "file";
+  images?: ImageItem[];
+  sources?: SearchSource[];
+  researchSteps?: ResearchStep[];
+  audioUrl?: string;
   model?: string | null;
   tokensUsed?: number | null;
   createdAt: string | Date;

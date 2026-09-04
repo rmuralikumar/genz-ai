@@ -16,6 +16,9 @@ import {
   ChatStatus,
   AttachmentItem,
   ChatErrorInfo,
+  ImageItem,
+  SearchSource,
+  ResearchStep,
 } from "@/types/chat";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 
@@ -261,6 +264,12 @@ export function AppShell() {
   ) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
 
+    // Check if user is authenticated before sending
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
     let convId = activeId;
 
     // If no active conversation, create one first
@@ -274,12 +283,24 @@ export function AppShell() {
             model: currentModel,
           }),
         });
+        if (createRes.status === 401) {
+          setUser(null);
+          setAuthModalOpen(true);
+          return;
+        }
         if (!createRes.ok) throw new Error("Could not start conversation");
         const createData = await createRes.json();
         convId = createData.conversation.id;
         setActiveId(convId);
       } catch (err) {
         console.error("Failed to create conversation:", err);
+        setErrorInfo({
+          code: "CONVERSATION_CREATE_ERROR",
+          message: "Could not start conversation. Please sign in or try again.",
+          failedContent: content,
+          failedAttachments: attachments,
+        });
+        setStatus("error");
         return;
       }
     }
@@ -330,6 +351,10 @@ export function AppShell() {
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          setUser(null);
+          setAuthModalOpen(true);
+        }
         const errorData = await res.json().catch(() => ({}));
         setErrorInfo({
           code: errorData.code || "AI_PROVIDER_ERROR",
@@ -351,6 +376,11 @@ export function AppShell() {
 
       const decoder = new TextDecoder();
       let accumulated = "";
+      let incomingImages: ImageItem[] | undefined = undefined;
+      let incomingSources: SearchSource[] | undefined = undefined;
+      let incomingResearchSteps: ResearchStep[] | undefined = undefined;
+      let incomingType: "text" | "image" | "search" | "research" = "text";
+      let responseModel: string = currentModel;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -376,6 +406,39 @@ export function AppShell() {
                 setStatus("error");
                 setStreamingContent("");
                 return;
+              } else if (parsed.type === "sources" && parsed.sources) {
+                incomingSources = parsed.sources;
+              } else if (parsed.type === "research") {
+                incomingType = "research";
+                responseModel = "genz-reasoning";
+                if (parsed.sources) incomingSources = parsed.sources;
+                if (parsed.steps) incomingResearchSteps = parsed.steps;
+                if (parsed.text) {
+                  accumulated = parsed.text;
+                  setStreamingContent(accumulated);
+                }
+              } else if (parsed.type === "research_step") {
+                if (parsed.text) {
+                  accumulated += parsed.text;
+                  setStreamingContent(accumulated);
+                }
+              } else if (parsed.type === "status") {
+                if (parsed.text) {
+                  accumulated += parsed.text;
+                  setStreamingContent(accumulated);
+                }
+              } else if (parsed.type === "image" && parsed.images) {
+                incomingType = "image";
+                incomingImages = parsed.images;
+                if (parsed.text) {
+                  accumulated = parsed.text;
+                  setStreamingContent(accumulated);
+                }
+                if (parsed.mode === "search") {
+                  responseModel = "genz-search";
+                } else if (parsed.mode === "generate") {
+                  responseModel = "genz-creative";
+                }
               } else if (parsed.text) {
                 accumulated += parsed.text;
                 setStreamingContent(accumulated);
@@ -388,14 +451,26 @@ export function AppShell() {
       }
 
       // Generation completed successfully with real AI content
-      if (accumulated.trim()) {
+      if (accumulated.trim() || (incomingImages && incomingImages.length > 0)) {
         const assistantMsg: ChatMessage = {
           id: `assistant-msg-${Date.now()}`,
           conversationId: convId,
           role: "assistant",
           content: accumulated,
-          model: currentModel,
+          type: incomingType,
+          images: incomingImages,
+          sources: incomingSources,
+          researchSteps: incomingResearchSteps,
+          model: responseModel,
           createdAt: new Date(),
+          attachments: incomingImages
+            ? incomingImages.map((img) => ({
+                filename: img.alt || "image.jpg",
+                mimeType: "image/jpeg",
+                size: 150000,
+                url: img.url,
+              }))
+            : undefined,
         };
 
         setMessages((prev) => [...prev, assistantMsg]);

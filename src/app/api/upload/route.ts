@@ -11,7 +11,12 @@ const ALLOWED_MIME_TYPES = [
   "text/markdown",
   "text/javascript",
   "text/typescript",
+  "text/csv",
   "application/json",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/msword",
+  "application/vnd.ms-excel",
 ];
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
