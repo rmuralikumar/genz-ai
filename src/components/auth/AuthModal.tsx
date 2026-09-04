@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { X, AlertCircle, Loader2 } from "lucide-react";
 import { UserProfile } from "@/types/chat";
@@ -61,6 +61,7 @@ export function AuthModal({
     if (onClearError) onClearError();
 
     // Redirect to the Google OAuth initiation endpoint
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/api/auth/google";
   };
 
@@ -128,7 +129,7 @@ export function AuthModal({
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-gray-700 shrink-0" />
-                <span>Connecting to Google...</span>
+                <span>Signing in with Google...</span>
               </>
             ) : (
               <>

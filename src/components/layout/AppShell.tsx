@@ -561,6 +561,7 @@ export function AppShell() {
       setUser(null);
       setConversations([]);
       handleNewChat();
+      setAuthErrorMessage(null);
       setAuthModalOpen(true);
     } catch (err) {
       console.error("Logout error:", err);
@@ -583,7 +584,10 @@ export function AppShell() {
           user={user}
           onOpenSettings={() => setSettingsOpen(true)}
           onLogout={handleLogout}
-          onOpenAuth={() => setAuthModalOpen(true)}
+          onOpenAuth={() => {
+            setAuthErrorMessage(null);
+            setAuthModalOpen(true);
+          }}
         />
       </div>
 
@@ -602,7 +606,10 @@ export function AppShell() {
         user={user}
         onOpenSettings={() => setSettingsOpen(true)}
         onLogout={handleLogout}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => {
+          setAuthErrorMessage(null);
+          setAuthModalOpen(true);
+        }}
       />
 
       {/* Main Conversation Window */}

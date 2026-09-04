@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getGoogleOAuthConfig, resolveAppOrigin } from "@/lib/auth/google_config";
 
 export async function GET(req: NextRequest) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const { clientId, isConfigured } = getGoogleOAuthConfig();
+  const origin = resolveAppOrigin(req);
 
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-  const protocol = req.headers.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  const origin = host ? `${protocol}://${host}` : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-  if (!clientId || !clientSecret || clientId === "your-google-client-id.apps.googleusercontent.com") {
+  if (!isConfigured) {
+    console.error(
+      "[Google OAuth] Cannot initiate Google sign-in: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing or not configured. Please check your .env file."
+    );
     const errorMsg = encodeURIComponent(
-      "Google OAuth is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file."
+      "Google sign-in is temporarily unavailable. Please configure Google OAuth credentials."
     );
     return NextResponse.redirect(`${origin}/?auth_error=${errorMsg}`);
   }
@@ -30,6 +30,15 @@ export async function GET(req: NextRequest) {
 
   const response = NextResponse.redirect(googleAuthUrl.toString());
 
+  // Attach CSRF state cookie directly to redirect response and cookieStore
+  response.cookies.set("oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 10, // 10 minutes
+    path: "/",
+  });
+
   const cookieStore = await cookies();
   cookieStore.set("oauth_state", state, {
     httpOnly: true,
@@ -41,3 +50,4 @@ export async function GET(req: NextRequest) {
 
   return response;
 }
+
