@@ -108,17 +108,24 @@ export async function createAiStream({
     })),
   ];
 
-  const baseUrl = (process.env.OLLAMA_BASE_URL || "http://localhost:11434").replace(
+  const baseUrl = (process.env.OLLAMA_BASE_URL || "https://ollama.com").replace(
     /\/+$/,
     ""
   );
 
-  // 4. Call Ollama local API (POST http://localhost:11434/api/chat)
+  // 4. Call Ollama API (POST ${baseUrl}/api/chat)
   let res: Response;
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(process.env.OLLAMA_API_KEY
+        ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY.trim().replace(/^["']|["']$/g, "")}` }
+        : {}),
+    };
+
     res = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model: targetModel,
         messages: ollamaMessages,
@@ -126,7 +133,7 @@ export async function createAiStream({
       }),
     });
   } catch (err: unknown) {
-    // If Ollama is not running, check if OpenAI API Key is available as fallback
+    // If Ollama is unreachable, check if OpenAI API Key is available as fallback
     if (process.env.OPENAI_API_KEY) {
       try {
         return await createOpenAiFallbackStream(messages, process.env.OPENAI_API_KEY);
@@ -135,15 +142,15 @@ export async function createAiStream({
       }
     }
 
-    console.error("Local Ollama connection failed:", err);
+    console.error("Ollama connection failed:", err);
     throw new AiServiceError(
       "OLLAMA_NOT_RUNNING",
-      `Ollama is not running locally at ${baseUrl}. Please start Ollama with 'ollama serve' in your terminal, and ensure model '${targetModel}' is installed with 'ollama pull ${targetModel}'.`,
+      `Unable to connect to Ollama service at ${baseUrl}. Please verify the service is available and model '${targetModel}' is accessible.`,
       503
     );
   }
 
-  // 5. Handle Ollama error responses (e.g. model not pulled, 404)
+  // 5. Handle Ollama error responses (e.g. model not pulled, 401 auth failure, 404)
   if (!res.ok) {
     let errorDetail = "";
     try {
@@ -151,6 +158,14 @@ export async function createAiStream({
       errorDetail = errJson.error || "";
     } catch {
       errorDetail = res.statusText;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      throw new AiServiceError(
+        "OLLAMA_AUTH_ERROR",
+        "Ollama Cloud authentication failed. Please verify your OLLAMA_API_KEY.",
+        401
+      );
     }
 
     const lowerError = errorDetail.toLowerCase();
@@ -161,7 +176,7 @@ export async function createAiStream({
     ) {
       throw new AiServiceError(
         "OLLAMA_MODEL_NOT_FOUND",
-        `The model '${targetModel}' is not installed in Ollama. Please download it by running: 'ollama pull ${targetModel}' in your terminal.`,
+        `The model '${targetModel}' is not found in Ollama. Please ensure the model is available.`,
         404
       );
     }
