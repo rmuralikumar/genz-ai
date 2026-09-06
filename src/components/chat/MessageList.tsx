@@ -119,20 +119,25 @@ export function MessageList({
       className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
     >
       {!hasMessages ? (
-        /* Empty Chat State */
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto select-none">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg mb-5 shadow-indigo-500/20 ring-1 ring-white/20">
-            <Sparkles className="w-7 h-7" />
+        /* Minimalist Retro-Futuristic Empty State */
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto select-none pt-8 sm:pt-12">
+          {/* Glowing Emblem */}
+          <div className="relative mb-5 group">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-[0_0_25px_rgba(0,240,255,0.35)] border border-cyan-400/50 ring-1 ring-purple-500/40">
+              <Sparkles className="w-7 h-7 text-cyan-200 drop-shadow-[0_0_8px_#00f0ff]" />
+            </div>
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-purple-500/20 to-cyan-500/20 blur-md -z-10 group-hover:opacity-100 transition-opacity" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] mb-2">
-            How can GENZ-AI help you today?
+
+          <h2 className="text-xl sm:text-2xl font-black tracking-widest bg-gradient-to-r from-purple-300 via-pink-200 to-cyan-300 bg-clip-text text-transparent uppercase drop-shadow-[0_0_10px_rgba(0,240,255,0.2)] mb-1">
+            GENZ-AI NEURAL MATRIX
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8">
-            Experience ultra-fast streaming responses, code highlighting, reasoning, and context-aware assistance in any language.
+          <p className="text-xs font-mono text-cyan-400/70 tracking-wider max-w-md mb-8">
+            QUANTUM REASONING // HIGH-CONCURRENCY STREAMING
           </p>
 
-          {/* Starter Suggestions Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full text-left">
+          {/* Starter Directives Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left">
             {STARTER_PROMPTS.map((item, idx) => {
               const Icon = item.icon;
               return (
@@ -140,16 +145,16 @@ export function MessageList({
                   key={idx}
                   onClick={() => onSelectStarter?.(item.prompt)}
                   type="button"
-                  className="p-4 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)]/50 transition-all text-left group shadow-sm flex flex-col justify-between"
+                  className="p-3.5 rounded-2xl bg-[#090d1c]/80 hover:bg-[#0f142b] border border-purple-500/25 hover:border-cyan-400/60 transition-all duration-200 text-left group shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] flex flex-col justify-between"
                 >
                   <div>
-                    <div className="p-2 rounded-lg bg-[var(--bg-card)] w-fit mb-3 text-[var(--accent-primary)] group-hover:text-white group-hover:bg-[var(--accent-primary)] transition-colors">
+                    <div className="p-2 rounded-xl bg-purple-950/50 border border-purple-500/30 w-fit mb-3 text-cyan-400 group-hover:text-cyan-200 group-hover:border-cyan-400/50 group-hover:shadow-[0_0_10px_rgba(0,240,255,0.3)] transition-all">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="font-semibold text-sm text-[var(--text-primary)] mb-1">
+                    <div className="font-semibold text-xs text-slate-200 group-hover:text-white mb-1 tracking-wide">
                       {item.title}
                     </div>
-                    <div className="text-xs text-[var(--text-muted)] line-clamp-2">
+                    <div className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
                       {item.desc}
                     </div>
                   </div>
@@ -178,7 +183,7 @@ export function MessageList({
             );
           })}
 
-          {/* Smooth In-Stream Typing Indicator (when contacting or waiting for first token) */}
+          {/* Smooth In-Stream Typing Indicator */}
           {(status === "submitting" || (status === "streaming" && !streamingContent)) && (() => {
             const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
             const imageIntent = lastUserMsg ? detectImageIntent(lastUserMsg.content) : null;
@@ -190,36 +195,36 @@ export function MessageList({
               streamingContent.includes("Generating image");
 
             let badgeLabel = activeModelConfig.name;
-            let statusLabel = "GENZ-AI is thinking...";
+            let statusLabel = "Processing neural directives...";
 
             if (isImageSearch) {
               badgeLabel = "Photo Search";
-              statusLabel = "Finding photos...";
+              statusLabel = "Searching archives...";
             } else if (isImageGen) {
               badgeLabel = "Image Studio";
-              statusLabel = "Generating image...";
+              statusLabel = "Synthesizing visual matrix...";
             }
 
             return (
-              <div className="py-4 sm:py-5 px-3 sm:px-4 md:px-6 bg-[var(--bot-msg-bg)]/40 border-y border-[var(--border-subtle)] flex justify-start animate-in fade-in duration-200">
-                <div className="w-full max-w-3xl flex gap-3 sm:gap-3.5 flex-row justify-start">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-sm ring-1 ring-white/20 shrink-0 select-none">
-                    <Bot className="w-4 h-4" />
+              <div className="py-4 sm:py-5 px-3 sm:px-4 md:px-6 bg-[#070915]/50 border-y border-purple-500/15 flex justify-start animate-in fade-in duration-200">
+                <div className="w-full max-w-3xl mx-auto flex gap-3 sm:gap-3.5 flex-row justify-start">
+                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-black border border-purple-500/40 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.35)] flex items-center justify-center shrink-0 select-none">
+                    <Bot className="w-4 h-4 text-cyan-300" />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col items-start text-left">
                     <div className="flex items-center gap-2 mb-2 select-none flex-wrap">
-                      <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">
+                      <span className="text-xs font-semibold tracking-wider text-slate-200">
                         GENZ-AI
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-[var(--accent-glow)] text-[var(--accent-primary)] font-medium border border-[var(--accent-primary)]/20 shadow-xs">
+                      <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-md bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shadow-[0_0_6px_rgba(0,240,255,0.2)]">
                         <span>{badgeLabel}</span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 py-1 text-[var(--text-muted)] text-sm">
-                      <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-bounce" />
-                      <span className="ml-2 text-xs text-[var(--text-muted)] font-medium">
+                    <div className="flex items-center gap-1.5 py-1 text-slate-400 text-sm font-mono">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff] animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#a855f7] animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff] animate-bounce" />
+                      <span className="ml-2 text-xs text-cyan-300/80">
                         {statusLabel}
                       </span>
                     </div>
@@ -290,9 +295,9 @@ export function MessageList({
           onClick={() => scrollToBottom("smooth")}
           type="button"
           aria-label="Scroll to bottom"
-          className="sticky bottom-4 self-center p-2.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)] shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+          className="sticky bottom-4 self-center p-2 rounded-full bg-[#0a0d1e]/90 hover:bg-[#121832] text-cyan-400 hover:text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-all hover:scale-105 active:scale-95 focus:outline-none z-20"
         >
-          <ArrowDown className="w-4 h-4" />
+          <ArrowDown className="w-4 h-4 stroke-[2.5]" />
         </button>
       )}
     </div>

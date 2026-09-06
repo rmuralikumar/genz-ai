@@ -94,10 +94,11 @@ export function Sidebar({
     if (items.length === 0) return null;
     return (
       <div className="mb-4">
-        <div className="px-3 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-          {title}
+        <div className="px-3 py-1 text-[10px] font-mono tracking-widest text-cyan-400/70 uppercase font-semibold flex items-center gap-1.5">
+          <span className="w-1 h-1 rounded-full bg-cyan-400/80 shadow-[0_0_4px_#00f0ff]" />
+          <span>{title}</span>
         </div>
-        <div className="space-y-0.5">
+        <div className="space-y-1 mt-1">
           {items.map((conv) => {
             const isActive = conv.id === activeId;
             const isEditing = conv.id === editingId;
@@ -109,14 +110,20 @@ export function Sidebar({
                 onClick={() => {
                   if (!isEditing) onSelectConversation(conv.id);
                 }}
-                className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-sm cursor-pointer transition-all ${
+                className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-all duration-200 border ${
                   isActive
-                    ? "bg-[var(--bg-surface-hover)] text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]/60 hover:text-[var(--text-primary)]"
+                    ? "bg-purple-950/40 border-purple-500/50 text-cyan-300 shadow-[0_0_12px_rgba(168,85,247,0.2)] font-medium"
+                    : "border-transparent text-slate-300 hover:bg-purple-950/25 hover:border-purple-500/30 hover:text-white hover:shadow-[0_0_10px_rgba(168,85,247,0.15)]"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <MessageSquare className="w-4 h-4 shrink-0 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
+                  <MessageSquare
+                    className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                      isActive
+                        ? "text-cyan-400 drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]"
+                        : "text-slate-500 group-hover:text-purple-400"
+                    }`}
+                  />
                   {isEditing ? (
                     <form
                       onSubmit={(e) => submitRename(conv.id, e)}
@@ -128,7 +135,7 @@ export function Sidebar({
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         autoFocus
-                        className="w-full bg-[var(--bg-surface)] border border-[var(--border-focus)] rounded px-1.5 py-0.5 text-xs text-[var(--text-primary)] outline-none"
+                        className="w-full bg-[#0a0e1c] border border-cyan-400/60 rounded px-1.5 py-0.5 text-xs text-white outline-none shadow-[0_0_8px_rgba(0,240,255,0.3)]"
                       />
                       <button
                         type="submit"
@@ -145,7 +152,7 @@ export function Sidebar({
                       </button>
                     </form>
                   ) : (
-                    <span className="truncate text-xs">{conv.title}</span>
+                    <span className="truncate">{conv.title}</span>
                   )}
                 </div>
 
@@ -158,9 +165,10 @@ export function Sidebar({
                         e.stopPropagation();
                         setMenuOpenId(isMenuOpen ? null : conv.id);
                       }}
-                      className={`p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-opacity ${
-                        isMenuOpen ? "!opacity-100" : ""
+                      className={`p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-purple-900/40 text-slate-400 hover:text-cyan-300 transition-all ${
+                        isMenuOpen ? "!opacity-100 bg-purple-900/40 text-cyan-300" : ""
                       }`}
+                      aria-label="Conversation options"
                     >
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </button>
@@ -168,26 +176,26 @@ export function Sidebar({
                     {isMenuOpen && (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full mt-1 w-28 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xl p-1 z-50 animate-in fade-in"
+                        className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-[#0e1224] border border-purple-500/30 shadow-[0_0_20px_rgba(0,0,0,0.8)] p-1 z-50 animate-in fade-in zoom-in-95"
                       >
                         <button
                           type="button"
                           onClick={(e) => startRename(conv, e)}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]"
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-cyan-300 hover:bg-purple-950/40 transition-colors"
                         >
-                          <Edit2 className="w-3 h-3" />
+                          <Edit2 className="w-3.5 h-3.5" />
                           <span>Rename</span>
                         </button>
                         <button
                           type="button"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            onDeleteConversation(conv.id);
+                            await onDeleteConversation(conv.id);
                             setMenuOpenId(null);
                           }}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10"
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                           <span>Delete</span>
                         </button>
                       </div>
@@ -203,32 +211,32 @@ export function Sidebar({
   };
 
   return (
-    <aside className="w-64 h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex flex-col justify-between select-none">
+    <aside className="w-64 h-full bg-[#050711]/90 backdrop-blur-xl border-r border-purple-500/20 shadow-[4px_0_24px_rgba(0,0,0,0.5)] flex flex-col justify-between select-none relative z-20">
       {/* Top Header & Brand */}
-      <div className="p-3.5 border-b border-[var(--border-subtle)]">
+      <div className="p-3.5 border-b border-purple-500/20">
         <div className="flex items-center justify-between mb-3.5 px-1">
           <Logo size="sm" showText={true} />
         </div>
 
-        {/* New Chat Button */}
+        {/* Compact New Chat Button */}
         <button
           onClick={onNewChat}
           type="button"
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-950/70 via-purple-900/60 to-indigo-950/70 hover:from-purple-900/90 hover:via-purple-800/80 hover:to-cyan-950/70 text-purple-100 hover:text-white border border-purple-500/40 hover:border-cyan-400/60 text-xs font-semibold shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-cyan-400"
         >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>New Chat</span>
+          <Plus className="w-4 h-4 stroke-[2.5] text-cyan-400" />
+          <span className="tracking-wide">NEW CHAT</span>
         </button>
 
         {/* Search Conversations */}
         <div className="relative mt-2.5">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400" />
           <input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] focus:border-[var(--border-focus)] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-colors"
+            className="w-full bg-[#090d1c]/80 border border-purple-500/20 focus:border-cyan-400/60 focus:shadow-[0_0_12px_rgba(0,240,255,0.2)] rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 outline-none transition-all duration-200"
           />
         </div>
       </div>
@@ -236,8 +244,8 @@ export function Sidebar({
       {/* Conversation History List */}
       <div className="flex-1 overflow-y-auto px-2 py-3">
         {conversations.length === 0 ? (
-          <div className="p-4 text-center text-xs text-[var(--text-muted)]">
-            {searchQuery ? "No matching chats found." : "No chats yet. Start talking!"}
+          <div className="p-4 text-center text-xs text-slate-500 font-mono">
+            {searchQuery ? "NO CHATS MATCHED" : "NO ACTIVE SESSIONS"}
           </div>
         ) : (
           <>
@@ -249,11 +257,11 @@ export function Sidebar({
       </div>
 
       {/* User Footer Profile */}
-      <div className="p-3 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)]/30">
+      <div className="p-3 border-t border-purple-500/20 bg-[#080b18]/80 backdrop-blur-md">
         {user ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-              <div className="w-7 h-7 rounded-full bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+              <div className="w-7 h-7 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 ring-1 ring-cyan-400/30 shadow-[0_0_8px_rgba(0,240,255,0.25)] flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
@@ -268,10 +276,10 @@ export function Sidebar({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                <div className="text-xs font-semibold text-slate-200 truncate">
                   {user.name || user.email.split("@")[0]}
                 </div>
-                <div className="text-[10px] text-[var(--text-muted)] truncate">
+                <div className="text-[10px] font-mono text-cyan-400/60 truncate">
                   {user.email}
                 </div>
               </div>
@@ -283,7 +291,7 @@ export function Sidebar({
                 onClick={onOpenSettings}
                 title="Settings"
                 aria-label="Settings"
-                className="p-1.5 rounded-lg hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                className="p-1.5 rounded-lg hover:bg-purple-950/40 text-slate-400 hover:text-cyan-300 transition-colors"
               >
                 <Settings className="w-4 h-4" />
               </button>
@@ -292,7 +300,7 @@ export function Sidebar({
                 onClick={onLogout}
                 title="Sign out"
                 aria-label="Sign out"
-                className="p-1.5 rounded-lg hover:bg-rose-500/15 text-[var(--text-secondary)] hover:text-rose-400 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -302,9 +310,9 @@ export function Sidebar({
           <button
             type="button"
             onClick={onOpenAuth}
-            className="w-full py-2 px-3 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2 px-3 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 hover:border-cyan-400/50 text-xs font-semibold text-purple-100 hover:text-white flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(168,85,247,0.15)] transition-all"
           >
-            <UserIcon className="w-4 h-4 text-[var(--accent-primary)]" />
+            <UserIcon className="w-4 h-4 text-cyan-400" />
             <span>Sign In with Google</span>
           </button>
         )}

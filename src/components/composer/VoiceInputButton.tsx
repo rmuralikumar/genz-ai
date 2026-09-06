@@ -190,22 +190,22 @@ export function VoiceInputButton({
       disabled={disabled || isProcessing}
       title={isListening ? "Listening... click to stop" : isProcessing ? "Processing speech..." : "Voice input (Microphone)"}
       aria-label={isListening ? "Stop listening" : "Start voice input"}
-      className={`relative p-2 rounded-xl transition-all focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] ${
+      className={`relative p-2 rounded-xl transition-all focus:outline-none focus:ring-1 focus:ring-cyan-400 ${
         isListening
-          ? "bg-rose-500/20 text-rose-400 ring-2 ring-rose-500/50 animate-pulse"
+          ? "bg-pink-950/60 text-pink-400 border border-pink-500/50 shadow-[0_0_15px_rgba(255,42,133,0.4)] animate-pulse"
           : isProcessing
-          ? "bg-[var(--accent-glow)] text-[var(--accent-primary)]"
-          : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]"
+          ? "bg-purple-950/60 text-cyan-300 border border-cyan-400/40"
+          : "text-slate-400 hover:text-cyan-300 hover:bg-purple-950/40"
       }`}
     >
       {isProcessing ? (
-        <Loader2 className="w-5 h-5 animate-spin text-[var(--accent-primary)]" />
+        <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
       ) : isListening ? (
         <span className="relative flex items-center justify-center">
-          <Mic className="w-5 h-5 text-rose-400" />
+          <Mic className="w-5 h-5 text-pink-400 drop-shadow-[0_0_6px_#ff2a85]" />
           <span className="absolute -top-1 -right-1 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
           </span>
         </span>
       ) : (

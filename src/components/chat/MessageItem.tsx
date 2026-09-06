@@ -102,10 +102,10 @@ export function MessageItem({
 
   return (
     <div
-      className={`py-4 sm:py-5 px-3 sm:px-6 transition-colors ${
+      className={`group py-3.5 sm:py-4.5 px-3 sm:px-6 transition-colors ${
         isUser
           ? "bg-transparent flex justify-end"
-          : "bg-[var(--bot-msg-bg)]/40 border-y border-[var(--border-subtle)] flex justify-start"
+          : "bg-[#070914]/50 border-y border-purple-500/15 flex justify-start"
       }`}
     >
       <div
@@ -116,11 +116,11 @@ export function MessageItem({
         {/* Avatar */}
         <div className="shrink-0 pt-0.5">
           {isUser ? (
-            <div className="w-8 h-8 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-white shadow-sm ring-1 ring-white/10">
+            <div className="w-8 h-8 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 ring-1 ring-purple-400/40 shadow-[0_0_10px_rgba(168,85,247,0.3)] flex items-center justify-center">
               <User className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-md shadow-indigo-500/20 ring-1 ring-white/15 bg-black flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-[0_0_12px_rgba(0,240,255,0.4)] ring-1 ring-cyan-400/50 border border-purple-500/40 bg-black flex items-center justify-center">
               <Image
                 src="/logo.png"
                 alt="GENZ-AI"
@@ -140,11 +140,11 @@ export function MessageItem({
               isUser ? "justify-end" : "justify-start"
             }`}
           >
-            <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">
+            <span className="text-xs font-semibold tracking-wide text-slate-300">
               {isUser ? "You" : "GENZ-AI"}
             </span>
             {!isUser && modelConfig && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-glow)] text-[var(--accent-primary)] font-medium border border-[var(--accent-primary)]/20">
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-cyan-950/60 text-cyan-300 font-medium border border-cyan-500/30 shadow-[0_0_6px_rgba(0,240,255,0.2)]">
                 {modelConfig.name}
               </span>
             )}
@@ -160,14 +160,14 @@ export function MessageItem({
               {message.attachments.map((att, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0c1022] border border-purple-500/30 text-xs text-slate-300 shadow-sm"
                 >
                   {att.mimeType.startsWith("image/") ? (
-                    <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                    <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
                   ) : (
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <FileText className="w-3.5 h-3.5 text-purple-400" />
                   )}
-                  <span className="truncate max-w-[150px]">{att.filename}</span>
+                  <span className="truncate max-w-[150px] font-mono">{att.filename}</span>
                 </div>
               ))}
             </div>
@@ -175,7 +175,7 @@ export function MessageItem({
 
           {/* Text Bubble / Markdown / Structured Images */}
           {isUser ? (
-            <div className="inline-block text-left p-3.5 rounded-2xl bg-[var(--user-msg-bg)] text-[var(--user-msg-text)] shadow-sm text-[14.5px] leading-relaxed break-words max-w-full space-y-2">
+            <div className="inline-block text-left px-4 py-2.5 rounded-2xl rounded-tr-sm bg-gradient-to-r from-purple-950/80 to-purple-900/60 border border-purple-500/40 text-purple-50 shadow-[0_0_15px_rgba(168,85,247,0.18)] text-[14.5px] leading-relaxed break-words max-w-full space-y-2">
               {/* If user attached an image, render preview inside or above bubble */}
               {message.attachments && message.attachments.some((a) => a.mimeType.startsWith("image/")) && (
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -315,9 +315,9 @@ export function MessageItem({
             </div>
           )}
 
-          {/* Action Toolbar */}
+          {/* Action Toolbar - subtly appears on hover */}
           <div
-            className={`flex items-center gap-1 mt-2 text-[var(--text-muted)] ${
+            className={`flex items-center gap-1 mt-2 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
               isUser ? "justify-end" : "justify-start"
             }`}
           >
@@ -326,10 +326,10 @@ export function MessageItem({
               type="button"
               title="Copy message"
               aria-label={copied ? "Copied" : "Copy message"}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              className="p-1.5 rounded-lg hover:bg-purple-950/40 hover:text-cyan-300 border border-transparent hover:border-purple-500/30 transition-all focus:outline-none focus:ring-1 focus:ring-cyan-400"
             >
               {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-cyan-400 drop-shadow-[0_0_6px_#00f0ff]" />
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}
@@ -341,14 +341,14 @@ export function MessageItem({
                 type="button"
                 title={isSpeaking ? "Stop speaking" : "Read message aloud"}
                 aria-label={isSpeaking ? "Stop speaking" : "Read message aloud"}
-                className={`p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] ${
+                className={`p-1.5 rounded-lg border transition-all focus:outline-none focus:ring-1 focus:ring-cyan-400 ${
                   isSpeaking
-                    ? "bg-[var(--accent-glow)] text-[var(--accent-primary)] animate-pulse"
-                    : "hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
+                    ? "bg-purple-950/60 border-cyan-400/50 text-cyan-300 shadow-[0_0_8px_rgba(0,240,255,0.3)] animate-pulse"
+                    : "border-transparent hover:bg-purple-950/40 hover:text-cyan-300 hover:border-purple-500/30"
                 }`}
               >
                 {isSpeaking ? (
-                  <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                  <VolumeX className="w-3.5 h-3.5 text-pink-400" />
                 ) : (
                   <Volume2 className="w-3.5 h-3.5" />
                 )}
@@ -361,7 +361,7 @@ export function MessageItem({
                 type="button"
                 title="Regenerate response"
                 aria-label="Regenerate response"
-                className="p-1.5 rounded-md hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+                className="p-1.5 rounded-lg hover:bg-purple-950/40 hover:text-cyan-300 border border-transparent hover:border-purple-500/30 transition-all focus:outline-none focus:ring-1 focus:ring-cyan-400"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -373,9 +373,9 @@ export function MessageItem({
                 type="button"
                 title="Edit message"
                 aria-label="Edit message"
-                className="text-xs px-1.5 py-1 rounded hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-colors"
+                className="text-[11px] font-mono px-2 py-0.5 rounded-lg text-slate-400 hover:text-purple-300 hover:bg-purple-950/40 border border-transparent hover:border-purple-500/30 transition-all"
               >
-                Edit
+                EDIT
               </button>
             )}
           </div>

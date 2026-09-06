@@ -67,10 +67,10 @@ export function AttachmentButton({
         disabled={disabled || uploading}
         title="Add attachment (images, PDF, code)"
         aria-label="Add attachment"
-        className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+        className="p-2 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-purple-950/40 transition-colors disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-cyan-400"
       >
         {uploading ? (
-          <Loader2 className="w-5 h-5 animate-spin text-[var(--accent-primary)]" />
+          <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
         ) : (
           <Paperclip className="w-5 h-5" />
         )}

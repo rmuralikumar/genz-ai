@@ -569,9 +569,17 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#060810] text-[#f8fafc] relative selection:bg-purple-500/30 selection:text-cyan-200">
+      {/* Ambient Synthwave Lighting Gradients */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[120px]" />
+        <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-purple-600/7 blur-[140px]" />
+        <div className="absolute inset-0 synthwave-grid opacity-70" />
+        <div className="absolute inset-0 retro-scanlines opacity-40 pointer-events-none" />
+      </div>
+
       {/* Desktop Persistent Sidebar */}
-      <div className="hidden md:block shrink-0 h-full">
+      <div className="hidden md:block shrink-0 h-full z-20">
         <Sidebar
           conversations={conversations}
           activeId={activeId}
@@ -613,13 +621,15 @@ export function AppShell() {
       />
 
       {/* Main Conversation Window */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative z-10">
         <ChatHeader
           currentModel={currentModel}
           onSelectModel={setCurrentModel}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           onNewChat={handleNewChat}
           onOpenSettings={() => setSettingsOpen(true)}
+          user={user}
+          onOpenSearch={() => setMobileSidebarOpen(true)}
         />
 
         <MessageList

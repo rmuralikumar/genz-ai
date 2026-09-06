@@ -67,20 +67,20 @@ export function MobileSidebar({
     <div className="fixed inset-0 z-50 md:hidden flex">
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-in fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-72 max-w-[85vw] h-full bg-[var(--bg-sidebar)] shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-300">
+      <div className="relative w-72 max-w-[85vw] h-full bg-[#050711]/95 backdrop-blur-2xl border-r border-purple-500/30 shadow-[0_0_30px_rgba(0,0,0,0.9)] flex flex-col z-10 animate-in slide-in-from-left duration-300">
         {/* Close Button Header */}
-        <div className="absolute right-2 top-3 z-20">
+        <div className="absolute right-2.5 top-3 z-20">
           <button
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="p-1.5 rounded-lg bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            className="p-1.5 rounded-lg bg-purple-950/50 border border-purple-500/30 text-slate-400 hover:text-cyan-300 hover:border-cyan-400/50 transition-colors shadow-sm"
           >
             <X className="w-4 h-4" />
           </button>
