@@ -30,6 +30,12 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
+function redirectWithNoIndex(url: string | URL) {
+  const res = NextResponse.redirect(url);
+  res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  return res;
+}
+
 export async function handleGoogleOAuthCallback(req: NextRequest) {
   const origin = resolveAppOrigin(req);
   const searchParams = req.nextUrl.searchParams;
@@ -48,11 +54,11 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     } else if (errorDescription) {
       message = errorDescription;
     }
-    return NextResponse.redirect(`${origin}/?auth_error=${encodeURIComponent(message)}`);
+    return redirectWithNoIndex(`${origin}/?auth_error=${encodeURIComponent(message)}`);
   }
 
   if (!code) {
-    return NextResponse.redirect(
+    return redirectWithNoIndex(
       `${origin}/?auth_error=${encodeURIComponent("No authorization code received from Google.")}`
     );
   }
@@ -63,7 +69,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
   cookieStore.delete("oauth_state");
 
   if (!savedState || !state || savedState !== state) {
-    return NextResponse.redirect(
+    return redirectWithNoIndex(
       `${origin}/?auth_error=${encodeURIComponent("Authentication session expired or state mismatch. Please try again.")}`
     );
   }
@@ -74,7 +80,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     console.error(
       "[Google OAuth] Cannot complete OAuth callback: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing or not configured in process.env / .env."
     );
-    return NextResponse.redirect(
+    return redirectWithNoIndex(
       `${origin}/?auth_error=${encodeURIComponent("Google OAuth client configuration is missing.")}`
     );
   }
@@ -137,7 +143,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
         userFriendlyMsg = `Google OAuth error: ${tokenError.error_description}`;
       }
 
-      return NextResponse.redirect(
+      return redirectWithNoIndex(
         `${origin}/?auth_error=${encodeURIComponent(userFriendlyMsg)}`
       );
     }
@@ -153,7 +159,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
 
     if (!userinfoResponse.ok) {
       console.error("Failed to fetch user profile from Google:", await userinfoResponse.text());
-      return NextResponse.redirect(
+      return redirectWithNoIndex(
         `${origin}/?auth_error=${encodeURIComponent("Google sign-in is temporarily unavailable. Please try again.")}`
       );
     }
@@ -161,7 +167,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     const userInfo: GoogleUserInfo = await userinfoResponse.json();
 
     if (!userInfo.email) {
-      return NextResponse.redirect(
+      return redirectWithNoIndex(
         `${origin}/?auth_error=${encodeURIComponent("No email address associated with this Google account.")}`
       );
     }
@@ -216,7 +222,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     });
 
     // 7. Store session cookie (7 days, httpOnly, secure in production)
-    const response = NextResponse.redirect(`${origin}/?auth_success=true`);
+    const response = redirectWithNoIndex(`${origin}/?auth_success=true`);
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
@@ -238,7 +244,7 @@ export async function handleGoogleOAuthCallback(req: NextRequest) {
     return response;
   } catch (err: unknown) {
     console.error("Google OAuth callback exception:", err);
-    return NextResponse.redirect(
+    return redirectWithNoIndex(
       `${origin}/?auth_error=${encodeURIComponent("Google sign-in is temporarily unavailable. Please try again.")}`
     );
   }

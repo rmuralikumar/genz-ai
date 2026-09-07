@@ -17,11 +17,10 @@ import {
   BookOpen,
   Palette,
   BarChart3,
-  ShieldCheck,
-  Zap,
   CheckCircle2,
-  ChevronRight,
+  HelpCircle,
 } from "lucide-react";
+import { faqItems } from "@/lib/seo";
 import { Logo } from "@/components/layout/Logo";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { UserProfile } from "@/types/chat";
@@ -31,8 +30,6 @@ export function LandingPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
   // Check auth status on mount & handle OAuth callback redirects
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -66,9 +63,6 @@ export function LandingPage() {
       })
       .catch((err) => {
         console.error("Session verification note:", err);
-      })
-      .finally(() => {
-        setIsCheckingAuth(false);
       });
   }, [router]);
 
@@ -83,6 +77,22 @@ export function LandingPage() {
   const handleScrollToFeatures = (e: React.MouseEvent) => {
     e.preventDefault();
     const el = document.getElementById("features");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScrollToCapabilities = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = document.getElementById("built-for-you");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScrollToFaq = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = document.getElementById("faq");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
@@ -119,6 +129,7 @@ export function LandingPage() {
               </a>
               <a
                 href="#built-for-you"
+                onClick={handleScrollToCapabilities}
                 className="hover:text-white transition-colors"
               >
                 Capabilities
@@ -128,6 +139,13 @@ export function LandingPage() {
                 className="hover:text-white transition-colors"
               >
                 Technology
+              </a>
+              <a
+                href="#faq"
+                onClick={handleScrollToFaq}
+                className="hover:text-white transition-colors"
+              >
+                FAQ
               </a>
             </nav>
 
@@ -165,6 +183,8 @@ export function LandingPage() {
           </div>
         </header>
 
+        <main className="flex-1 flex flex-col">
+
         {/* =====================================================================
             2. HERO SECTION
         ====================================================================== */}
@@ -179,12 +199,15 @@ export function LandingPage() {
 
           {/* Hero Headline */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white mb-6 max-w-4xl leading-[1.12]">
-            Your AI. One Powerful Workspace.
+            Intelligent Multimodal{" "}
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+              Conversational AI
+            </span>
           </h1>
 
           {/* Supporting Text */}
           <p className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-3xl mb-10 leading-relaxed font-normal">
-            GENZ-AI brings conversational reasoning, photorealistic image generation, real-time web search, deep investigative research, document analysis, vision, voice transcription, and multi-tier video generation into a single modern workspace.
+            GENZ-AI is an intelligent multimodal conversational AI platform uniting autonomous reasoning, photorealistic FLUX image generation, real-time web search, deep investigative research, document analysis, vision, voice transcription, and multi-tier video generation into a single unified workspace.
           </p>
 
           {/* CTAs */}
@@ -508,7 +531,46 @@ export function LandingPage() {
         </section>
 
         {/* =====================================================================
-            6. BOTTOM CTA
+            6. FREQUENTLY ASKED QUESTIONS & CAPABILITIES (AI SEARCH / GEO)
+        ====================================================================== */}
+        <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 max-w-5xl mx-auto border-t border-white/[0.06] w-full">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 text-purple-300 text-xs font-medium mb-4">
+              <HelpCircle className="w-3.5 h-3.5 text-purple-400" />
+              <span>AI Search &amp; Capability Directory</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+              Frequently Asked Questions &amp; Capabilities
+            </h2>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Clear, factual answers to key questions about GENZ-AI features, privacy, supported models, and multimodal tools.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            {faqItems.map((item, idx) => (
+              <article
+                key={idx}
+                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6 transition-all duration-200 hover:border-purple-500/30 hover:bg-white/[0.03] flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-white mb-2.5 flex items-start gap-2">
+                    <span className="text-cyan-400 font-mono text-xs mt-0.5 shrink-0">
+                      0{idx + 1}.
+                    </span>
+                    <span>{item.question}</span>
+                  </h3>
+                  <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed pl-5">
+                    {item.answer}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* =====================================================================
+            7. BOTTOM CTA
         ====================================================================== */}
         <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center border-t border-white/[0.06]">
           <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-8 sm:p-14">
@@ -528,9 +590,10 @@ export function LandingPage() {
             </button>
           </div>
         </section>
+        </main>
 
         {/* =====================================================================
-            7. MINIMAL FOOTER
+            8. MINIMAL FOOTER
         ====================================================================== */}
         <footer className="mt-auto border-t border-white/[0.08] py-8 px-4 sm:px-6 bg-[#04060d]">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
@@ -549,9 +612,17 @@ export function LandingPage() {
               </a>
               <a
                 href="#built-for-you"
+                onClick={handleScrollToCapabilities}
                 className="hover:text-zinc-300 transition-colors"
               >
                 Capabilities
+              </a>
+              <a
+                href="#faq"
+                onClick={handleScrollToFaq}
+                className="hover:text-zinc-300 transition-colors"
+              >
+                FAQ
               </a>
               <span className="text-zinc-600">•</span>
               <span>© {new Date().getFullYear()} GENZ-AI. All rights reserved.</span>

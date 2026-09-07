@@ -25,7 +25,7 @@ export function Logo({ size = "md", showText = false, className = "" }: LogoProp
       >
         <Image
           src="/logo.png"
-          alt="GENZ-AI"
+          alt="GENZ-AI Intelligent Multimodal AI Workspace"
           width={currentSize.img}
           height={currentSize.img}
           priority

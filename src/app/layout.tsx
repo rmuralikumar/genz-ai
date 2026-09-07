@@ -2,18 +2,65 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
+import { siteConfig } from "@/lib/seo";
+
 export const metadata: Metadata = {
-  title: "GENZ-AI — Your AI Assistant",
-  description:
-    "A modern conversational AI assistant engineered for speed, reasoning, and beautiful responsive experience across mobile and desktop.",
-  icons: {
-    icon: "/favicon.ico",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: "GENZ-AI — Intelligent Multimodal Conversational AI",
+    template: "%s | GENZ-AI",
+  },
+  description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  authors: siteConfig.authors,
+  creator: siteConfig.creator,
+  publisher: siteConfig.publisher,
+  applicationName: siteConfig.name,
+  category: "technology",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   openGraph: {
-    title: "GENZ-AI — Your AI Assistant",
-    description: "Intelligent, responsive conversational AI assistant.",
-    siteName: "GENZ-AI",
     type: "website",
+    locale: siteConfig.locale,
+    url: siteConfig.url,
+    title: "GENZ-AI — Intelligent Multimodal Conversational AI",
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "GENZ-AI — Intelligent Multimodal Conversational AI",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GENZ-AI — Intelligent Multimodal Conversational AI",
+    description: siteConfig.description,
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 

@@ -1,12 +1,23 @@
 import { LandingPage } from "@/components/landing/LandingPage";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { siteConfig, getHomepageSchema } from "@/lib/seo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GENZ-AI — Your AI. One Powerful Workspace.",
-  description:
-    "An intelligent conversational workspace unifying AI chat, image generation, web search, deep research, file analysis, vision, voice transcription, and multi-tier video generation.",
+  title: siteConfig.title,
+  description: siteConfig.description,
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function HomePage() {
-  return <LandingPage />;
+  const schema = getHomepageSchema();
+
+  return (
+    <>
+      <JsonLd data={schema} />
+      <LandingPage />
+    </>
+  );
 }
