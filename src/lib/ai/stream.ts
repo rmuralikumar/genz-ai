@@ -1,4 +1,7 @@
 import { getModelConfig } from "./models";
+import { OLLAMA_TOOLS, TOOL_REGISTRY, ToolExecutionResult } from "./tools/registry";
+import { parseToolCallFromResponse, parseActionFromContent, ParsedToolCall } from "./tools/parser";
+import { detectVideoIntent } from "./intent_router";
 
 export const GENZ_SYSTEM_PROMPT = `You are GENZ-AI, a smart, friendly, and natural conversational AI assistant.
 You have native-level fluency in English, Tamil, and Tanglish (Tamil words written using the English alphabet).
@@ -27,10 +30,17 @@ PRIMARY GUIDELINES:
 4. Consistency & Personality:
    - Maintain the same engaging, helpful GENZ-AI personality across all turns of the conversation.
 
-5. Image, Media & Visual Requests:
-   - Visual and image requests are handled by GENZ-AI's dedicated image engine.
-   - NEVER hallucinate or pretend you are sending or displaying a photo in plain text when you cannot.
-   - Keep answers helpful, accurate, and conversational without fake image announcements.
+5. Media & Tool Execution Capabilities:
+   - VIDEO GENERATION: You have video generation capability via the 'video_generation' tool (powered by Replicate).
+     When the user asks for a video, animation, or clip (e.g. "generate a video", "make a 5 second video", "video of ..."), ALWAYS call the video_generation tool!
+     NEVER answer with "I can't directly generate video files" or "I cannot make videos" when video generation is requested.
+     Do NOT offer to generate an image instead of a video when the user asked for a video.
+   - IMAGE GENERATION: When the user asks for an image, drawing, or visual artwork, call the image_generation tool.
+     Do NOT call image tools (like dalle.text2im) for video requests!
+   - WEB SEARCH: Call web_search when current facts or web info are requested.
+   - CALCULATOR: Call calculator for arithmetic and math computations.
+   - TEXT TO SPEECH: Call text_to_speech for voice synthesis.
+   - NEVER output raw unexecuted JSON (e.g., {"action": ...}) to the user. Always execute tools properly.
 
 FEW-SHOT EXAMPLES:
 User: enna panra
@@ -58,7 +68,7 @@ export class AiServiceError extends Error {
   code: string;
   userMessage: string;
   statusCode: number;
-
+ 
   constructor(code: string, userMessage: string, statusCode: number = 500) {
     super(userMessage);
     this.name = "AiServiceError";
@@ -68,6 +78,10 @@ export class AiServiceError extends Error {
   }
 }
 
+/**
+ * Creates an AI response stream with built-in tool schema declaration,
+ * tool call interception, tool execution, and seamless result streaming.
+ */
 export async function createAiStream({
   messages,
   modelId,
@@ -85,7 +99,10 @@ export async function createAiStream({
   }
 
   const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
-  if (!lastUserMessage || (!lastUserMessage.content.trim() && (!lastUserMessage.images || lastUserMessage.images.length === 0))) {
+  if (
+    !lastUserMessage ||
+    (!lastUserMessage.content.trim() && (!lastUserMessage.images || lastUserMessage.images.length === 0))
+  ) {
     throw new AiServiceError(
       "INVALID_REQUEST",
       "Message content or image attachment cannot be empty.",
@@ -113,22 +130,25 @@ export async function createAiStream({
     ""
   );
 
-  // 4. Call Ollama API (POST ${baseUrl}/api/chat)
-  let res: Response;
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(process.env.OLLAMA_API_KEY
-        ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY.trim().replace(/^["']|["']$/g, "")}` }
-        : {}),
-    };
+  const encoder = new TextEncoder();
 
+  // 4. Call Ollama API with tool definitions (POST ${baseUrl}/api/chat)
+  let res: Response;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(process.env.OLLAMA_API_KEY
+      ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY.trim().replace(/^["']|["']$/g, "")}` }
+      : {}),
+  };
+
+  try {
     res = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
       headers,
       body: JSON.stringify({
         model: targetModel,
         messages: ollamaMessages,
+        tools: OLLAMA_TOOLS,
         stream: false,
       }),
     });
@@ -188,42 +208,124 @@ export async function createAiStream({
     );
   }
 
-  // 6. Read generated response from data.message.content
-  let data: { message?: { content?: string } };
+  // 6. Read generated response
+  interface OllamaResponsePayload {
+    message?: {
+      content?: string;
+      tool_calls?: Array<{
+        id?: string;
+        function?: {
+          name?: string;
+          arguments?: Record<string, unknown> | string;
+        };
+      }>;
+    };
+  }
+
+  let data: OllamaResponsePayload;
   try {
     data = await res.json();
   } catch (err: unknown) {
     console.error("Failed to parse Ollama JSON response:", err);
     throw new AiServiceError(
       "OLLAMA_INVALID_RESPONSE",
-      "Received an invalid response format from the local Ollama service.",
+      "Received an invalid response format from the Ollama service.",
       502
     );
   }
 
-  const generatedContent = data.message?.content ?? "";
+  const rawMessage = data.message || {};
+  const generatedContent = rawMessage.content ?? "";
 
-  // 7. Return ReadableStream emitting SSE chunks compatible with existing frontend
-  const encoder = new TextEncoder();
+  // 7. Parse tool call from native tool_calls OR ReAct action JSON in message.content
+  let parsedTool: ParsedToolCall | null = parseToolCallFromResponse(rawMessage);
+  if (!parsedTool && generatedContent) {
+    parsedTool = parseActionFromContent(generatedContent);
+  }
 
+  // Detect if user or conversation history has video intent
+  const lastUserText = lastUserMessage?.content || "";
+  const userVideoIntent = detectVideoIntent(lastUserText);
+
+  // CRITICAL REQUIREMENT: Do NOT route video requests to image_generation or dalle.text2im
+  if (userVideoIntent.isVideo && parsedTool) {
+    if (parsedTool.tool.name === "image_generation") {
+      parsedTool = {
+        tool: TOOL_REGISTRY.video_generation,
+        rawName: "video_generation",
+        args: {
+          prompt: userVideoIntent.prompt || String(parsedTool.args.prompt || "a cinematic video"),
+        },
+      };
+    }
+  }
+
+  // 8. If a tool call is detected, EXECUTE IT!
+  if (parsedTool) {
+    return handleToolExecutionStream({
+      parsedTool,
+      messages,
+      baseUrl,
+      headers,
+      targetModel,
+      encoder,
+    });
+  }
+
+  // 9. Extra safety guard: check if plain text has an embedded action JSON
+  let fallbackAction = parseActionFromContent(generatedContent);
+  if (fallbackAction) {
+    if (userVideoIntent.isVideo && fallbackAction.tool.name === "image_generation") {
+      fallbackAction = {
+        tool: TOOL_REGISTRY.video_generation,
+        rawName: "video_generation",
+        args: {
+          prompt: userVideoIntent.prompt || String(fallbackAction.args.prompt || "a cinematic video"),
+        },
+      };
+    }
+    return handleToolExecutionStream({
+      parsedTool: fallbackAction,
+      messages,
+      baseUrl,
+      headers,
+      targetModel,
+      encoder,
+    });
+  }
+
+  // 10. CRITICAL REQUIREMENT: NEVER expose raw ReAct/action JSON to the user!
+  let safeContent = generatedContent;
+  if (
+    /"action"\s*:\s*"dalle\.text2im"/i.test(safeContent) ||
+    (/"action"\s*:\s*"/i.test(safeContent) && /"action_input"/i.test(safeContent))
+  ) {
+    const emergencyAction = parseActionFromContent(safeContent);
+    if (emergencyAction) {
+      if (userVideoIntent.isVideo && emergencyAction.tool.name === "image_generation") {
+        emergencyAction.tool = TOOL_REGISTRY.video_generation;
+      }
+      return handleToolExecutionStream({
+        parsedTool: emergencyAction,
+        messages,
+        baseUrl,
+        headers,
+        targetModel,
+        encoder,
+      });
+    }
+    // Cleanly strip raw action JSON from text output
+    safeContent = safeContent.replace(/\{[\s\S]*?"action"[\s\S]*?\}/gi, "").trim();
+    if (!safeContent) {
+      safeContent = "Processing your request with AI tools...";
+    }
+  }
+
+  // 11. Natural conversational response streaming
   return new ReadableStream({
     async start(controller) {
       try {
-        // Chunk generated content into natural words/tokens for smooth streaming UX
-        const tokens = generatedContent.match(/\S+|\s+/g) || [generatedContent];
-        const chunkSize = 3;
-
-        for (let i = 0; i < tokens.length; i += chunkSize) {
-          const chunk = tokens.slice(i, i + chunkSize).join("");
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`)
-          );
-
-          if (tokens.length > 10) {
-            await new Promise((r) => setTimeout(r, 15));
-          }
-        }
-
+        await streamTokens(safeContent, controller, encoder);
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (err: unknown) {
@@ -241,6 +343,191 @@ export async function createAiStream({
       }
     },
   });
+}
+
+/**
+ * Handles executing a tool and streaming the result (or second-turn synthesis) cleanly to the client.
+ */
+function handleToolExecutionStream({
+  parsedTool,
+  messages,
+  baseUrl,
+  headers,
+  targetModel,
+  encoder,
+}: {
+  parsedTool: ParsedToolCall;
+  messages: StreamMessage[];
+  baseUrl: string;
+  headers: Record<string, string>;
+  targetModel: string;
+  encoder: TextEncoder;
+}): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        // Execute the tool
+        const toolResult: ToolExecutionResult = await parsedTool.tool.execute(parsedTool.args);
+
+        // CASE 1: Image Generation / Search Result
+        if (toolResult.type === "image") {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "image",
+                mode: toolResult.mode,
+                images: toolResult.images,
+                text: toolResult.text,
+              })}\n\n`
+            )
+          );
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // CASE 2: Web Search Result (Emit sources tray + second turn synthesis)
+        if (toolResult.type === "sources") {
+          if (toolResult.sources && toolResult.sources.length > 0) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "sources",
+                  sources: toolResult.sources,
+                })}\n\n`
+              )
+            );
+          }
+
+          // Second-turn LLM synthesis with verified facts
+          try {
+            const query = String(parsedTool.args.query || "");
+            const followUpMessages = [
+              { role: "system", content: GENZ_SYSTEM_PROMPT },
+              ...messages.map((m) => ({
+                role: m.role,
+                content: m.content || "",
+              })),
+              {
+                role: "assistant",
+                content: `I will check the latest web sources for: "${query}"`,
+              },
+              {
+                role: "user",
+                content: `Here are the latest verified search findings for "${query}":\n\n${toolResult.text}\n\nPlease synthesize a clear, friendly, and comprehensive answer for the user based on these verified facts. Mention key facts directly with natural citations.`,
+              },
+            ];
+
+            const secondTurnRes = await fetch(`${baseUrl}/api/chat`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                model: targetModel,
+                messages: followUpMessages,
+                stream: false,
+              }),
+            });
+
+            if (secondTurnRes.ok) {
+              const secondData = await secondTurnRes.json();
+              const synthesisText = secondData.message?.content || toolResult.text || "";
+              await streamTokens(synthesisText, controller, encoder);
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              return;
+            }
+          } catch (synthErr) {
+            console.warn("Second-turn synthesis error:", synthErr);
+          }
+
+          // Fallback: output search summary directly
+          await streamTokens(
+            toolResult.text || "Found relevant web sources above.",
+            controller,
+            encoder
+          );
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // CASE 3: Calculator / Math Execution
+        if (toolResult.type === "text") {
+          await streamTokens(toolResult.text, controller, encoder);
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // CASE 4: Audio / Text-to-Speech
+        if (toolResult.type === "audio") {
+          await streamTokens(toolResult.text, controller, encoder);
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // CASE 5: Video Generation Result
+        if (toolResult.type === "video") {
+          await streamTokens(toolResult.text, controller, encoder);
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // CASE 6: Error / Provider Missing
+        if (toolResult.type === "error") {
+          await streamTokens(toolResult.error, controller, encoder);
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // Default: close
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      } catch (err: unknown) {
+        console.error("Tool execution failed in stream:", err);
+        const errMsg =
+          err instanceof Error
+            ? err.message
+            : "Encountered an unexpected error executing tool.";
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              text: `⚠️ **Action Execution Error:** ${errMsg}`,
+            })}\n\n`
+          )
+        );
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
+}
+
+/**
+ * Splits text into natural tokens and streams with smooth typing pacing.
+ */
+async function streamTokens(
+  text: string,
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder
+): Promise<void> {
+  if (!text) return;
+  const tokens = text.match(/\S+|\s+/g) || [text];
+  const chunkSize = 3;
+
+  for (let i = 0; i < tokens.length; i += chunkSize) {
+    const chunk = tokens.slice(i, i + chunkSize).join("");
+    controller.enqueue(
+      encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`)
+    );
+
+    if (tokens.length > 10) {
+      await new Promise((r) => setTimeout(r, 12));
+    }
+  }
 }
 
 /**
@@ -274,6 +561,11 @@ async function createOpenAiFallbackStream(
     }),
   ];
 
+  const openAiTools = OLLAMA_TOOLS.map((t) => ({
+    type: "function" as const,
+    function: t.function,
+  }));
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -283,7 +575,8 @@ async function createOpenAiFallbackStream(
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: openAiMessages,
-      stream: true,
+      tools: openAiTools,
+      stream: false,
     }),
   });
 
@@ -291,36 +584,85 @@ async function createOpenAiFallbackStream(
     throw new Error(`OpenAI API error: ${res.status} ${res.statusText}`);
   }
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No OpenAI response stream");
+  interface OpenAiChoice {
+    message?: {
+      content?: string;
+      tool_calls?: Array<{
+        id?: string;
+        function?: {
+          name?: string;
+          arguments?: string;
+        };
+      }>;
+    };
+  }
 
+  const openAiData: { choices?: OpenAiChoice[] } = await res.json();
+  const choice = openAiData.choices?.[0]?.message;
   const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
 
-  return new ReadableStream({
-    async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
+  if (choice) {
+    let parsedTool = parseToolCallFromResponse(choice);
+    if (!parsedTool && choice.content) {
+      parsedTool = parseActionFromContent(choice.content);
+    }
+
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    const userVideoIntent = lastUserMsg?.content ? detectVideoIntent(lastUserMsg.content) : { isVideo: false, prompt: "" };
+
+    if (userVideoIntent.isVideo && parsedTool && parsedTool.tool.name === "image_generation") {
+      parsedTool = {
+        tool: TOOL_REGISTRY.video_generation,
+        rawName: "video_generation",
+        args: { prompt: userVideoIntent.prompt || String(parsedTool.args.prompt || "a cinematic video") },
+      };
+    }
+
+    if (parsedTool) {
+      const toolResult = await parsedTool.tool.execute(parsedTool.args);
+      return new ReadableStream({
+        async start(controller) {
+          if (toolResult.type === "image") {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "image",
+                  mode: toolResult.mode,
+                  images: toolResult.images,
+                  text: toolResult.text,
+                })}\n\n`
+              )
+            );
+          } else if (toolResult.type === "sources") {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "sources",
+                  sources: toolResult.sources,
+                })}\n\n`
+              )
+            );
+            await streamTokens(toolResult.text || "", controller, encoder);
+          } else if (toolResult.type === "text" || toolResult.type === "audio" || toolResult.type === "video") {
+            await streamTokens(toolResult.text, controller, encoder);
+          } else if (toolResult.type === "error") {
+            await streamTokens(toolResult.error, controller, encoder);
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        },
+      });
+    }
+
+    const content = choice.content || "";
+    return new ReadableStream({
+      async start(controller) {
+        await streamTokens(content, controller, encoder);
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
-        return;
-      }
+      },
+    });
+  }
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n");
-      for (const line of lines) {
-        if (line.startsWith("data: ") && line !== "data: [DONE]") {
-          try {
-            const data = JSON.parse(line.slice(6));
-            const delta = data.choices?.[0]?.delta?.content;
-            if (delta) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: delta })}\n\n`));
-            }
-          } catch {
-            // ignore partial JSON
-          }
-        }
-      }
-    },
-  });
+  throw new Error("No response choices received from OpenAI");
 }

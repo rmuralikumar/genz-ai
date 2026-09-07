@@ -33,9 +33,12 @@ export function detectImageIntent(input: string): DetectedImageIntent {
   const raw = input.trim();
   if (raw.length < 3) return { isImageRequest: false, mode: "none", prompt: "" };
 
-  // Negative guards: programming questions, tutorials, code requests, instructions
+  // Negative guards: programming questions, tutorials, code requests, instructions, videos, audio
   if (
     /^(?:show\s+me|give\s+me|send\s+me)\s+(?:how\s+to|an?\s+example|code|steps|a\s+way|a\s+solution|the\s+difference|documentation|details)/i.test(
+      raw
+    ) ||
+    /\b(?:video|clip|movie|animation|mp4|webm|audio|speech|tts|mp3|podcast|sound|song)\b/i.test(
       raw
     )
   ) {
@@ -44,18 +47,22 @@ export function detectImageIntent(input: string): DetectedImageIntent {
 
   // 1. GENERATIVE INTENT (AI generation, digital art, drawings, synthesis)
   const genPatterns = [
-    // generate/create/make/render an image/photo of X
-    /^(?:please\s+)?(?:generate|create|make|render)\s+(?:me\s+)?(?:an?|the|some)?\s*(?:image|img|picture|pic|photo|artwork|illustration|drawing|portrait|wallpaper)\s+(?:of|for|about)?\s*(.+)$/i,
-    // draw/paint/sketch/illustrate me X
-    /^(?:please\s+)?(?:draw|paint|sketch|illustrate)\s+(?:me\s+)?(?:an?|the|some)?\s*(.+)$/i,
-    // generate a futuristic city (direct without explicit image keyword)
-    /^(?:please\s+)?(?:generate|render)\s+(?:an?|the|some)?\s*(.+)$/i,
+    // can you / please / generate / create / make / render an image / photo / picture of X
+    /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:generate|create|make|render)\s+(?:me\s+)?(?:an?|the|some)?\s*(?:image|img|picture|pic|photo|artwork|illustration|drawing|portrait|wallpaper|graphic|logo|poster)\s+(?:of|for|about)?\s*(.+)$/i,
+    // can you draw / paint / sketch / illustrate me X
+    /^(?:can\s+you\s+|could\s+you\s+|would\s+you\s+|please\s+)?(?:draw|paint|sketch|illustrate)\s+(?:me\s+)?(?:an?|the|some)?\s*(?:image|picture|photo|portrait)?\s*(?:of|for|about)?\s*(.+)$/i,
+    // I want / need an image of X
+    /^(?:i\s+want|i\s+need|can\s+i\s+have|give\s+me)\s+(?:an?|the|some)?\s*(?:image|img|picture|pic|photo|artwork|illustration|drawing)\s+(?:of|for|about)\s*(.+)$/i,
+    // dalle / dall-e / flux generate X
+    /^(?:dalle|dall-e|dall-e-3|flux|ai)\s+(?:generate|create|make|draw|paint|render)?\s*(?:an?|the|some)?\s*(?:image|picture|artwork)?\s*(?:of|for)?\s*(.+)$/i,
     // create a picture of a cat / create an image of X
-    /^(?:please\s+)?create\s+(?:an?|the|some)?\s*(?:picture|image|img|pic|photo|drawing|illustration|artwork)\s+(?:of|for)?\s*(.+)$/i,
+    /^(?:can\s+you\s+|could\s+you\s+|please\s+)?create\s+(?:an?|the|some)?\s*(?:picture|image|img|pic|photo|drawing|illustration|artwork)\s+(?:of|for)?\s*(.+)$/i,
     // anime/digital art/3d render/concept art of X
-    /^(?:please\s+)?(?:an?|the)?\s*(?:anime(?:\s+style)?|3d\s+render|digital\s+art|concept\s+art)\s+(?:of|for)?\s*(.+)$/i,
-    // Tanglish generative: [subject] image create pannu / generate pannu / drawing podu
+    /^(?:please\s+)?(?:an?|the)?\s*(?:anime(?:\s+style)?|3d\s+render|digital\s+art|concept\s+art|oil\s+painting)\s+(?:of|for)?\s*(.+)$/i,
+    // [subject] image create pannu / generate pannu / drawing podu / varai
     /^(.+?)\s+(?:image|img|picture|pic|photo|drawing|art)\s*(?:create\s+pannu|generate\s+pannu|varai|draw\s+pannu)/i,
+    // generate [subject] image / create [subject] picture
+    /^(?:can\s+you\s+|please\s+)?(?:generate|create|make|draw)\s+(.+?)\s+(?:image|img|picture|pic|drawing|artwork)$/i,
   ];
 
   for (const pattern of genPatterns) {
@@ -71,8 +78,8 @@ export function detectImageIntent(input: string): DetectedImageIntent {
 
   // 2. PHOTO SEARCH INTENT (Real photos, pictures of people, actors, animals, cars, places, etc.)
   const searchPatterns = [
-    // actor surya photo snd panu / send me photo / photo anupu / pic podu
-    /^(?:please\s+)?(?:send|snd|give|show|find|search|get)\s+(?:me\s+)?(?:an?|the|some)?\s*(?:image|img|picture|pic|photo|wallpaper|photograph)\s+(?:of|for|about)?\s*(.+)$/i,
+    // can you / please / send / show / find a photo of X
+    /^(?:can\s+you\s+|could\s+you\s+|please\s+)?(?:send|snd|give|show|find|search|get)\s+(?:me\s+)?(?:an?|the|some)?\s*(?:image|img|picture|pic|photo|wallpaper|photograph)\s+(?:of|for|about)?\s*(.+)$/i,
     // photo of X / picture of X / image of X
     /^(?:an?|the\s+)?(?:image|img|picture|pic|photo|photograph|wallpaper)\s+(?:of|for|about)\s+(.+)$/i,
     // Tanglish: [subject] photo/pic/img [verb: snd panu / send panu / anupu / kaatu / kudu / podu / venum]
@@ -80,11 +87,11 @@ export function detectImageIntent(input: string): DetectedImageIntent {
     // [subject] photo / [subject] pic / [subject] img (e.g. "actor surya photo", "tiger pic")
     /^(.+?)\s+(?:image|img|picture|pic|photo)$/i,
     // send me a photo of X / send me X photo
-    /^(?:please\s+)?(?:send|snd|show|give|find|search)\s+(?:me\s+)?(.+?)\s+(?:image|img|picture|pic|photo)$/i,
+    /^(?:can\s+you\s+|please\s+)?(?:send|snd|show|give|find|search)\s+(?:me\s+)?(.+?)\s+(?:image|img|picture|pic|photo)$/i,
     // show me a Ferrari / show me Ferrari
     /^(?:please\s+)?(?:show|display)\s+(?:me\s+)?(?:an?|the\s+)?([a-zA-Z0-9\s]{2,40})$/i,
     // find a photo of X
-    /^(?:please\s+)?find\s+(?:me\s+)?(?:an?|the\s+)?(?:photo|picture|image|pic)\s+(?:of\s+)?(.+)$/i,
+    /^(?:can\s+you\s+|please\s+)?find\s+(?:me\s+)?(?:an?|the\s+)?(?:photo|picture|image|pic)\s+(?:of\s+)?(.+)$/i,
   ];
 
   for (const pattern of searchPatterns) {

@@ -228,13 +228,18 @@ export function MessageItem({
                 </div>
               )}
 
-              {/* If message has clean text, render markdown */}
               {(() => {
                 const hasStructuredImages = message.images && message.images.length > 0;
                 // Strip markdown images if we have structured images to prevent duplicates
-                const displayContent = hasStructuredImages
+                let displayContent = hasStructuredImages
                   ? message.content.replace(/!\[.*?\]\(.*?\)/g, "").trim()
                   : message.content;
+
+                // Normalize raw HTML video tags into markdown video links for seamless rendering
+                displayContent = displayContent.replace(
+                  /<video[^>]*src=["']([^"']+)["'][^>]*>(?:<\/video>)?/gi,
+                  "\n\n[🎬 Watch Video]($1)\n\n"
+                );
 
                 return displayContent ? (
                   <ReactMarkdown
@@ -276,6 +281,52 @@ export function MessageItem({
                           );
                         }
                         return <p {...props}>{children}</p>;
+                      },
+                      a({ href, children, ...props }) {
+                        const isVideo =
+                          href &&
+                          (href.endsWith(".mp4") ||
+                            href.includes(".mp4?") ||
+                            href.includes("replicate.delivery"));
+
+                        if (isVideo) {
+                          return (
+                            <div className="my-3 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/90 shadow-2xl">
+                              <video
+                                controls
+                                playsInline
+                                preload="metadata"
+                                src={href}
+                                className="w-full max-h-[460px] rounded-2xl object-contain bg-black"
+                              />
+                              <div className="p-2.5 bg-black/60 flex items-center justify-between text-xs text-slate-300">
+                                <span className="font-medium text-purple-300 flex items-center gap-1.5">
+                                  🎬 Playable Video
+                                </span>
+                                <a
+                                  href={href}
+                                  download
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1 rounded-lg bg-purple-600/50 hover:bg-purple-600/80 text-white font-medium transition-colors"
+                                >
+                                  📥 Download MP4
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:underline"
+                            {...props}
+                          >
+                            {children}
+                          </a>
+                        );
                       },
                       img({ src, alt }) {
                         const imageSrc = typeof src === "string" ? src : undefined;

@@ -7,6 +7,7 @@ import { resolveIntent } from "@/lib/ai/intent_router";
 import { performWebSearch, buildSearchAugmentedPrompt } from "@/lib/ai/web_search";
 import { executeDeepResearch } from "@/lib/ai/deep_research";
 import { parseUploadedFile } from "@/lib/ai/file_parser";
+import { TOOL_REGISTRY } from "@/lib/ai/tools/registry";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -285,6 +286,90 @@ export async function POST(req: Request) {
   }
 
   // ==========================================
+  // CASE A2: VIDEO GENERATION (Replicate)
+  // ==========================================
+  if (resolved.intent === "VIDEO_GENERATION") {
+    const videoPrompt = resolved.targetQuery;
+    const videoStream = new ReadableStream({
+      async start(controller) {
+        try {
+          if (videoPrompt.trim()) {
+            const statusText = `*🎬 Creating video with Replicate: **${videoPrompt}**...*\n\n`;
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "status", mode: "generate", text: statusText })}\n\n`
+              )
+            );
+          }
+
+          const videoResult = await TOOL_REGISTRY.video_generation.execute({ prompt: videoPrompt });
+
+          const finalText =
+            videoResult.type === "video"
+              ? videoResult.text
+              : videoResult.type === "error"
+              ? videoResult.error
+              : videoResult.text || "Video request processed.";
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "text",
+                text: finalText,
+              })}\n\n`
+            )
+          );
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+
+          await prisma.message.create({
+            data: {
+              conversationId: conversation.id,
+              role: "assistant",
+              content: finalText,
+              model: "genz-creative",
+              tokensUsed: 150,
+              attachments:
+                videoResult.type === "video" && videoResult.url
+                  ? {
+                      create: [
+                        {
+                          filename: `${(videoPrompt || "video").slice(0, 30).replace(/[^a-zA-Z0-9_-]/g, "_")}.mp4`,
+                          mimeType: "video/mp4",
+                          size: 2500000,
+                          url: videoResult.url,
+                        },
+                      ],
+                    }
+                  : undefined,
+            },
+          });
+
+          await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
+          });
+        } catch (videoErr) {
+          console.error("Video operation failed:", videoErr);
+          const errorMsg = "Sorry, video generation encountered an error. Please try again! 🎬";
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: errorMsg })}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(videoStream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  // ==========================================
   // CASE B: DEEP RESEARCH MODE
   // ==========================================
   if (resolved.intent === "DEEP_RESEARCH") {
@@ -473,6 +558,12 @@ export async function POST(req: Request) {
   let fullAssistantResponse = "";
   let hasStreamError = false;
   let sentSources = false;
+  const capturedAttachments: Array<{
+    filename: string;
+    mimeType: string;
+    size: number;
+    url: string;
+  }> = [];
 
   const responseStream = new ReadableStream({
     async pull(controller) {
@@ -498,8 +589,12 @@ export async function POST(req: Request) {
                 conversationId: conversation.id,
                 role: "assistant",
                 content: fullAssistantResponse,
-                model: selectedModel,
+                model: capturedAttachments.length > 0 ? "genz-creative" : selectedModel,
                 tokensUsed: Math.ceil(fullAssistantResponse.length / 4),
+                attachments:
+                  capturedAttachments.length > 0
+                    ? { create: capturedAttachments }
+                    : undefined,
               },
             });
 
@@ -534,6 +629,18 @@ export async function POST(req: Request) {
               } else if (data.text) {
                 fullAssistantResponse += data.text;
               }
+
+              // Capture images from tool execution stream
+              if (data.images && Array.isArray(data.images)) {
+                for (const img of data.images) {
+                  capturedAttachments.push({
+                    filename: `${(img.title || img.alt || "image").slice(0, 24).replace(/[^a-zA-Z0-9_-]/g, "_")}.jpg`,
+                    mimeType: img.mimeType || "image/jpeg",
+                    size: img.size || 150000,
+                    url: img.url,
+                  });
+                }
+              }
             } catch {
               // Non-critical SSE parse error
             }
@@ -554,7 +661,11 @@ export async function POST(req: Request) {
               conversationId: conversation.id,
               role: "assistant",
               content: fullAssistantResponse,
-              model: selectedModel,
+              model: capturedAttachments.length > 0 ? "genz-creative" : selectedModel,
+              attachments:
+                capturedAttachments.length > 0
+                  ? { create: capturedAttachments }
+                  : undefined,
             },
           })
           .catch(console.error);
