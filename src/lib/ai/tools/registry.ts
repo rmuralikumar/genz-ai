@@ -5,6 +5,7 @@
 
 import { generateAiImage, ImageResultItem } from "../image";
 import { performWebSearch, WebSearchResponse, SearchResult } from "../web_search";
+import { generateVideo } from "../video";
 
 export interface ToolDefinition {
   name: string;
@@ -424,154 +425,29 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
           ? args.input
           : "";
 
-      if (!prompt.trim()) {
+      const result = await generateVideo(prompt);
+
+      if (result.type === "video") {
         return {
-          type: "error",
-          error: "⚠️ Please specify what video you would like to create (e.g., *\"Generate a 5 second video of a futuristic purple sports car\"*).",
+          type: "video",
+          url: result.url,
+          text: result.text || "",
+          rawResult: result.rawResult,
         };
       }
 
-      // Check for Replicate API token strictly from environment variables
-      const token = process.env.REPLICATE_API_TOKEN?.trim().replace(/^["']|["']$/g, "");
-
-      if (!token) {
+      if (result.type === "error") {
         return {
           type: "error",
-          providerError: true,
-          error:
-            "⚠️ **Video Generation Provider Required**\n\n" +
-            `To generate videos for prompts like "*${prompt}*", a Replicate API token is required.\n\n` +
-            "Please configure `REPLICATE_API_TOKEN` in your environment variables (`.env` locally or in Vercel Project Settings).\n\n" +
-            "GENZ-AI currently supports real-time **Image Generation** (powered by FLUX & DALL-E 3) with zero API keys required!",
+          error: result.error || "Video generation encountered an error.",
         };
       }
 
-      try {
-        // Create prediction on Replicate using AnimateDiff model
-        const createRes = await fetch("https://api.replicate.com/v1/predictions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Prefer: "wait=60",
-          },
-          body: JSON.stringify({
-            version: "beecf59c4aee8d81bf04f0381033dfa10dc16e845b4ae00d281e2fa377e48a9f",
-            input: {
-              prompt: prompt.trim(),
-            },
-          }),
-        });
-
-        if (!createRes.ok) {
-          interface ReplicateErrorPayload {
-            title?: string;
-            detail?: string;
-          }
-          const errData: ReplicateErrorPayload = await createRes.json().catch(() => ({}));
-          const errMsg = errData.detail || errData.title || createRes.statusText;
-
-          if (createRes.status === 402) {
-            return {
-              type: "error",
-              providerError: true,
-              error:
-                "⚠️ **Replicate Credit Required**\n\n" +
-                `Your Replicate account requires credit to run video models: *${errMsg}*\n\n` +
-                "Please visit [Replicate Billing](https://replicate.com/account/billing) to add credits to your account.",
-            };
-          }
-
-          if (createRes.status === 401) {
-            return {
-              type: "error",
-              providerError: true,
-              error:
-                "⚠️ **Invalid Replicate Token**\n\nThe configured `REPLICATE_API_TOKEN` was rejected by the Replicate API. Please verify your token in `.env`.",
-            };
-          }
-
-          return {
-            type: "error",
-            error: `Replicate video generation request failed: ${errMsg} (HTTP ${createRes.status})`,
-          };
-        }
-
-        interface ReplicatePrediction {
-          id: string;
-          status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
-          output?: string | string[];
-          error?: string;
-        }
-
-        let prediction: ReplicatePrediction = await createRes.json();
-
-        // If not completed synchronously, poll up to 60s
-        const maxPolls = 20;
-        let polls = 0;
-        while (
-          (prediction.status === "starting" || prediction.status === "processing") &&
-          polls < maxPolls
-        ) {
-          await new Promise((r) => setTimeout(r, 3000));
-          polls++;
-          const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          if (pollRes.ok) {
-            prediction = await pollRes.json();
-          }
-        }
-
-        if (prediction.status === "succeeded" && prediction.output) {
-          const videoUrl = Array.isArray(prediction.output)
-            ? prediction.output[0]
-            : String(prediction.output);
-
-          const caption = `Here is your generated video for **${prompt}**:`;
-          const videoMarkdown =
-            `${caption}\n\n` +
-            `<video controls src="${videoUrl}" style="max-width: 100%; border-radius: 12px; margin: 12px 0; background: #000; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"></video>\n\n` +
-            `[📥 Download Video MP4](${videoUrl})`;
-
-          return {
-            type: "video",
-            url: videoUrl,
-            text: videoMarkdown,
-            rawResult: prediction,
-          };
-        }
-
-        if (prediction.status === "failed") {
-          return {
-            type: "error",
-            error: `Replicate video generation failed: ${prediction.error || "Model processing error"}`,
-          };
-        }
-
-        if (prediction.status === "starting" || prediction.status === "processing") {
-          return {
-            type: "text",
-            text:
-              `🎬 **Video rendering on Replicate!**\n\n` +
-              `Your video for **"${prompt}"** is currently rendering (Prediction ID: \`${prediction.id}\`).\n\n` +
-              `You can monitor the output directly at [Replicate Prediction](https://replicate.com/p/${prediction.id}).`,
-          };
-        }
-
-        return {
-          type: "error",
-          error: `Unexpected prediction status from Replicate: ${prediction.status}`,
-        };
-      } catch (repErr) {
-        console.error("Replicate video generation error:", repErr);
-        return {
-          type: "error",
-          error: `Failed to connect to Replicate video service: ${repErr instanceof Error ? repErr.message : "Unknown error"}`,
-        };
-      }
+      return {
+        type: "text",
+        text: result.text || "Video request processed.",
+        rawResult: result.rawResult,
+      };
     },
   },
 };

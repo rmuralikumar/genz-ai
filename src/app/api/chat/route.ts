@@ -286,7 +286,7 @@ export async function POST(req: Request) {
   }
 
   // ==========================================
-  // CASE A2: VIDEO GENERATION (Replicate)
+  // CASE A2: VIDEO GENERATION (Multi-Provider: Free AI Studio / Self-Hosted / Replicate)
   // ==========================================
   if (resolved.intent === "VIDEO_GENERATION") {
     const videoPrompt = resolved.targetQuery;
@@ -294,7 +294,7 @@ export async function POST(req: Request) {
       async start(controller) {
         try {
           if (videoPrompt.trim()) {
-            const statusText = `*🎬 Creating video with Replicate: **${videoPrompt}**...*\n\n`;
+            const statusText = `*🎬 Generating video scene for: **${videoPrompt}**...*\n\n`;
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "status", mode: "generate", text: statusText })}\n\n`
