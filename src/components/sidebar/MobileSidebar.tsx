@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { ConversationItem, UserProfile } from "@/types/chat";
 
@@ -20,6 +19,7 @@ interface MobileSidebarProps {
   onOpenSettings: () => void;
   onLogout: () => void;
   onOpenAuth: () => void;
+  onOpenSearch?: () => void;
 }
 
 export function MobileSidebar({
@@ -37,6 +37,7 @@ export function MobileSidebar({
   onOpenSettings,
   onLogout,
   onOpenAuth,
+  onOpenSearch,
 }: MobileSidebarProps) {
   // Handle ESC key to close drawer
   useEffect(() => {
@@ -64,30 +65,19 @@ export function MobileSidebar({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden flex">
+    <div className="fixed inset-0 z-50 md:hidden flex overflow-hidden">
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Drawer Panel */}
-      <div className="relative w-72 max-w-[85vw] h-full bg-[#050711]/95 backdrop-blur-2xl border-r border-purple-500/30 shadow-[0_0_30px_rgba(0,0,0,0.9)] flex flex-col z-10 animate-in slide-in-from-left duration-300">
-        {/* Close Button Header */}
-        <div className="absolute right-2.5 top-3 z-20">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close sidebar"
-            className="p-1.5 rounded-lg bg-purple-950/50 border border-purple-500/30 text-slate-400 hover:text-cyan-300 hover:border-cyan-400/50 transition-colors shadow-sm"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Sidebar Component */}
+      {/* Drawer Panel - clean full-width inside drawer */}
+      <div className="relative w-[280px] max-w-[85vw] h-full shadow-[0_0_40px_rgba(0,0,0,0.5)] flex flex-col z-10 animate-in slide-in-from-left duration-250 overflow-hidden">
         <Sidebar
+          isMobile={true}
+          onClose={onClose}
           conversations={conversations}
           activeId={activeId}
           onSelectConversation={(id) => {
@@ -114,6 +104,12 @@ export function MobileSidebar({
           onOpenAuth={() => {
             onOpenAuth();
             onClose();
+          }}
+          onOpenSearch={() => {
+            if (onOpenSearch) {
+              onOpenSearch();
+              onClose();
+            }
           }}
         />
       </div>

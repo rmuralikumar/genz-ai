@@ -105,7 +105,7 @@ export function MessageItem({
       className={`group py-3.5 sm:py-4.5 px-3 sm:px-6 transition-colors ${
         isUser
           ? "bg-transparent flex justify-end"
-          : "bg-[#070914]/50 border-y border-purple-500/15 flex justify-start"
+          : "border-y border-[var(--border-subtle)]/30 bg-[var(--bg-surface-hover)]/30 flex justify-start"
       }`}
     >
       <div
@@ -116,11 +116,11 @@ export function MessageItem({
         {/* Avatar */}
         <div className="shrink-0 pt-0.5">
           {isUser ? (
-            <div className="w-8 h-8 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 ring-1 ring-purple-400/40 shadow-[0_0_10px_rgba(168,85,247,0.3)] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[var(--accent-glow)] border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/30 shadow-xs flex items-center justify-center">
               <User className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-[0_0_12px_rgba(0,240,255,0.4)] ring-1 ring-cyan-400/50 border border-purple-500/40 bg-black flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-xs ring-1 ring-[var(--accent-cyan)]/50 border border-[var(--border-subtle)] bg-black flex items-center justify-center">
               <Image
                 src="/logo.png"
                 alt="GENZ-AI"
@@ -140,11 +140,11 @@ export function MessageItem({
               isUser ? "justify-end" : "justify-start"
             }`}
           >
-            <span className="text-xs font-semibold tracking-wide text-slate-300">
+            <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">
               {isUser ? "You" : "GENZ-AI"}
             </span>
             {!isUser && modelConfig && (
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-cyan-950/60 text-cyan-300 font-medium border border-cyan-500/30 shadow-[0_0_6px_rgba(0,240,255,0.2)]">
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-glow)] text-[var(--accent-cyan)] font-medium border border-[var(--accent-cyan)]/30">
                 {modelConfig.name}
               </span>
             )}
@@ -160,12 +160,12 @@ export function MessageItem({
               {message.attachments.map((att, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0c1022] border border-purple-500/30 text-xs text-slate-300 shadow-sm"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] shadow-xs"
                 >
                   {att.mimeType.startsWith("image/") ? (
-                    <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                    <ImageIcon className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
                   ) : (
-                    <FileText className="w-3.5 h-3.5 text-purple-400" />
+                    <FileText className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                   )}
                   <span className="truncate max-w-[150px] font-mono">{att.filename}</span>
                 </div>

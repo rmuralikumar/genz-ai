@@ -8,6 +8,8 @@ import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/composer/Composer";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { SearchPanel } from "@/components/search/SearchPanel";
+import { ToastProvider } from "@/components/ui/Toast";
 import {
   ChatMessage,
   ConversationItem,
@@ -21,16 +23,26 @@ import {
   ResearchStep,
 } from "@/types/chat";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
+import { applyTheme } from "@/lib/theme";
 
 export function AppShell() {
   // State
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [settings, setSettings] = useState<UserSettings>({
-    theme: "dark",
-    defaultModel: DEFAULT_MODEL_ID,
-    enterToSend: true,
-    autoScroll: true,
-    compactMode: false,
+  const [settings, setSettings] = useState<UserSettings>(() => {
+    let theme: "dark" | "light" | "system" = "dark";
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("genz_theme") as "dark" | "light" | "system" | null;
+        if (saved) theme = saved;
+      } catch {}
+    }
+    return {
+      theme,
+      defaultModel: DEFAULT_MODEL_ID,
+      enterToSend: true,
+      autoScroll: true,
+      compactMode: false,
+    };
   });
   const [usageStats, setUsageStats] = useState<{
     totalTokens: number;
@@ -52,6 +64,15 @@ export function AppShell() {
 
   // Modals & Drawers
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return localStorage.getItem("genz_sidebar_collapsed") === "true";
+      } catch {}
+    }
+    return false;
+  });
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
@@ -59,14 +80,29 @@ export function AppShell() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastFailedPromptRef = useRef<{ content: string; attachments?: AttachmentItem[] } | null>(null);
 
-  // Apply Theme
+  // Global Ctrl+K / Cmd+K shortcut for Search Panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchPanelOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Apply Theme with dynamic listener
   useEffect(() => {
     const theme = settings.theme || "dark";
+    applyTheme(theme);
     if (theme === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
-    } else {
-      document.documentElement.setAttribute("data-theme", theme);
+      const mql = window.matchMedia("(prefers-color-scheme: dark)");
+      const updateSystemTheme = () => {
+        applyTheme("system");
+      };
+      mql.addEventListener("change", updateSystemTheme);
+      return () => mql.removeEventListener("change", updateSystemTheme);
     }
   }, [settings.theme]);
 
@@ -90,7 +126,30 @@ export function AppShell() {
       const res = await fetch("/api/user/settings");
       if (res.ok) {
         const data = await res.json();
-        if (data.settings) setSettings(data.settings);
+        if (data.settings) {
+          // localStorage theme is authoritative on the client to avoid flash
+          let effectiveTheme = data.settings.theme || "dark";
+          try {
+            const localTheme = localStorage.getItem("genz_theme") as "dark" | "light" | "system" | null;
+            if (localTheme && (localTheme === "dark" || localTheme === "light" || localTheme === "system")) {
+              effectiveTheme = localTheme;
+              if (data.settings.theme !== localTheme) {
+                // Sync server in background so DB matches user's active theme
+                fetch("/api/user/settings", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ settings: { theme: localTheme } }),
+                }).catch(() => {});
+              }
+            }
+          } catch {}
+
+          setSettings({
+            ...data.settings,
+            theme: effectiveTheme,
+          });
+          applyTheme(effectiveTheme);
+        }
         if (data.usage) setUsageStats(data.usage);
       }
     } catch (err) {
@@ -533,6 +592,13 @@ export function AppShell() {
     newSettings: Partial<UserSettings>,
     name?: string
   ) => {
+    // Optimistically update local state & localStorage immediately
+    setSettings((prev) => ({ ...prev, ...newSettings }));
+    if (newSettings.theme) {
+      try {
+        localStorage.setItem("genz_theme", newSettings.theme);
+      } catch {}
+    }
     try {
       const res = await fetch("/api/user/settings", {
         method: "PATCH",
@@ -569,18 +635,54 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#060810] text-[#f8fafc] relative selection:bg-purple-500/30 selection:text-cyan-200">
-      {/* Ambient Synthwave Lighting Gradients */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[120px]" />
-        <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-purple-600/7 blur-[140px]" />
-        <div className="absolute inset-0 synthwave-grid opacity-70" />
-        <div className="absolute inset-0 retro-scanlines opacity-40 pointer-events-none" />
-      </div>
+    <ToastProvider>
+      <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] relative selection:bg-purple-500/30 selection:text-cyan-200 transition-colors">
+        {/* Ambient Synthwave Lighting Gradients */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[120px]" />
+          <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-purple-600/7 blur-[140px]" />
+          <div className="absolute inset-0 synthwave-grid opacity-70" />
+          <div className="absolute inset-0 retro-scanlines opacity-40 pointer-events-none" />
+        </div>
 
-      {/* Desktop Persistent Sidebar */}
-      <div className="hidden md:block shrink-0 h-full z-20">
-        <Sidebar
+        {/* Desktop Collapsible Sidebar */}
+        <div
+          className={`hidden md:block shrink-0 h-full z-20 transition-all duration-300 ease-in-out overflow-hidden ${
+            desktopSidebarCollapsed ? "w-0" : "w-64"
+          }`}
+        >
+          <div className="w-64 h-full">
+            <Sidebar
+              conversations={conversations}
+              activeId={activeId}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={handleNewChat}
+              onRenameConversation={handleRenameConversation}
+              onDeleteConversation={handleDeleteConversation}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              user={user}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onLogout={handleLogout}
+              onOpenAuth={() => {
+                setAuthErrorMessage(null);
+                setAuthModalOpen(true);
+              }}
+              onOpenSearch={() => setSearchPanelOpen(true)}
+              onToggleCollapse={() => {
+                setDesktopSidebarCollapsed(true);
+                try {
+                  localStorage.setItem("genz_sidebar_collapsed", "true");
+                } catch {}
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Drawer Sidebar */}
+        <MobileSidebar
+          isOpen={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
           conversations={conversations}
           activeId={activeId}
           onSelectConversation={handleSelectConversation}
@@ -596,96 +698,92 @@ export function AppShell() {
             setAuthErrorMessage(null);
             setAuthModalOpen(true);
           }}
+          onOpenSearch={() => setSearchPanelOpen(true)}
+        />
+
+        {/* Main Conversation Window */}
+        <main className="flex-1 flex flex-col h-full min-w-0 relative z-10">
+          <ChatHeader
+            currentModel={currentModel}
+            onSelectModel={setCurrentModel}
+            onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+            onNewChat={handleNewChat}
+            onOpenSettings={() => setSettingsOpen(true)}
+            user={user}
+            onOpenSearch={() => setSearchPanelOpen(true)}
+            isDesktopSidebarCollapsed={desktopSidebarCollapsed}
+            onToggleDesktopSidebar={() => {
+              setDesktopSidebarCollapsed(false);
+              try {
+                localStorage.setItem("genz_sidebar_collapsed", "false");
+              } catch {}
+            }}
+          />
+
+          <MessageList
+            messages={messages}
+            status={status}
+            streamingContent={streamingContent}
+            errorInfo={errorInfo}
+            onRetry={handleRetry}
+            onRegenerateLast={handleRegenerateLast}
+            onSelectStarter={(prompt) => handleSendMessage(prompt)}
+            onEditMessage={handleEditMessage}
+            autoScrollEnabled={settings.autoScroll}
+            currentModel={currentModel}
+          />
+
+          <Composer
+            onSendMessage={handleSendMessage}
+            onStopGeneration={handleStopGeneration}
+            status={status}
+            enterToSend={settings.enterToSend}
+            modelName={currentModel}
+            initialValue={editingMessageContent}
+            onCancelEdit={() => setEditingMessageContent("")}
+          />
+        </main>
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          user={user}
+          settings={settings}
+          onSaveSettings={handleSaveSettings}
+          usageStats={usageStats}
+        />
+
+        {/* Authentication Modal */}
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => {
+            setAuthModalOpen(false);
+            setAuthErrorMessage(null);
+          }}
+          errorMessage={authErrorMessage}
+          onClearError={() => setAuthErrorMessage(null)}
+          onAuthSuccess={(authUser) => {
+            setUser(authUser);
+            setActiveId(undefined);
+            setMessages([]);
+            try {
+              localStorage.removeItem("genz_logged_out");
+            } catch {}
+            loadConversations();
+            loadUserSettings();
+          }}
+        />
+
+        {/* ChatGPT-style Search Panel */}
+        <SearchPanel
+          isOpen={searchPanelOpen}
+          onClose={() => setSearchPanelOpen(false)}
+          conversations={conversations}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
         />
       </div>
-
-      {/* Mobile Drawer Sidebar */}
-      <MobileSidebar
-        isOpen={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-        conversations={conversations}
-        activeId={activeId}
-        onSelectConversation={handleSelectConversation}
-        onNewChat={handleNewChat}
-        onRenameConversation={handleRenameConversation}
-        onDeleteConversation={handleDeleteConversation}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        user={user}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onLogout={handleLogout}
-        onOpenAuth={() => {
-          setAuthErrorMessage(null);
-          setAuthModalOpen(true);
-        }}
-      />
-
-      {/* Main Conversation Window */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative z-10">
-        <ChatHeader
-          currentModel={currentModel}
-          onSelectModel={setCurrentModel}
-          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-          onNewChat={handleNewChat}
-          onOpenSettings={() => setSettingsOpen(true)}
-          user={user}
-          onOpenSearch={() => setMobileSidebarOpen(true)}
-        />
-
-        <MessageList
-          messages={messages}
-          status={status}
-          streamingContent={streamingContent}
-          errorInfo={errorInfo}
-          onRetry={handleRetry}
-          onRegenerateLast={handleRegenerateLast}
-          onSelectStarter={(prompt) => handleSendMessage(prompt)}
-          onEditMessage={handleEditMessage}
-          autoScrollEnabled={settings.autoScroll}
-          currentModel={currentModel}
-        />
-
-        <Composer
-          onSendMessage={handleSendMessage}
-          onStopGeneration={handleStopGeneration}
-          status={status}
-          enterToSend={settings.enterToSend}
-          modelName={currentModel}
-          initialValue={editingMessageContent}
-          onCancelEdit={() => setEditingMessageContent("")}
-        />
-      </main>
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        user={user}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        usageStats={usageStats}
-      />
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => {
-          setAuthModalOpen(false);
-          setAuthErrorMessage(null);
-        }}
-        errorMessage={authErrorMessage}
-        onClearError={() => setAuthErrorMessage(null)}
-        onAuthSuccess={(authUser) => {
-          setUser(authUser);
-          setActiveId(undefined);
-          setMessages([]);
-          try {
-            localStorage.removeItem("genz_logged_out");
-          } catch {}
-          loadConversations();
-          loadUserSettings();
-        }}
-      />
-    </div>
+    </ToastProvider>
   );
 }

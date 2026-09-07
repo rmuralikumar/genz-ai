@@ -1,6 +1,6 @@
 # GENZ-AI
 
-> An intelligent, full-stack conversational AI platform featuring progressive streaming chat, autonomous multimodal tool execution, and multi-provider media generation.
+> An intelligent, full-stack conversational AI platform featuring progressive streaming chat, autonomous multimodal tool execution, zero-flash adaptive themes, and multi-provider media generation.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
@@ -20,6 +20,9 @@
 ## Features
 
 - 💬 **Streaming AI Conversations**: Smooth, token-by-token streaming powered by Server-Sent Events (SSE) with live typing pacing and auto-scrolling.
+- 🌓 **Zero-Flash Theme Architecture**: Dark, Light, and System modes with a synchronous pre-render blocking script ensuring zero light-mode flash on refresh, persistent across `localStorage` and cloud settings.
+- 🔍 **Interactive Conversation Search (Ctrl+K / Cmd+K)**: Instant fuzzy search modal to filter, search, and jump across conversation histories.
+- 📱 **Adaptive ChatGPT-Style Sidebar**: Collapsible desktop sidebar with icon rail mode and a touch-optimized mobile drawer overlay.
 - 🔐 **Authentication & Security**: Google OAuth 2.0 integration and email/password authentication with secure HTTP-only session cookies and Bcrypt hashing.
 - 🗄️ **Persistent Chat History**: Cloud storage powered by Neon PostgreSQL and Prisma ORM, including conversation search, inline renaming, archiving, and deletion.
 - 🎨 **Generative AI Image Studio**: High-resolution image generation powered by FLUX (via Pollinations AI, zero API keys required) with optional OpenAI DALL-E 3 fallback.
@@ -32,7 +35,18 @@
 - 🎙️ **Voice Input & Transcription**: Voice recording and automated speech-to-text transcription.
 - 🔊 **Text-to-Speech (TTS)**: Built-in natural audio synthesis for listening to assistant responses.
 - 🎬 **AI Video Studio**: Flexible multi-provider video architecture with a zero-cost default storyboard generator, local GPU support, and optional cloud rendering.
-- 📱 **Responsive Interface**: Mobile-first responsive design featuring collapsible drawers, smooth micro-interactions, and dark/light themes.
+- 🔔 **Interactive Toast Feedback**: Contextual toast notifications for user actions and graceful notices for upcoming features.
+
+---
+
+## Zero-Flash Theme Architecture
+
+GENZ-AI implements a zero-flash theme persistence strategy designed to eliminate FOUC (Flash of Unstyled Content) during SSR hydration:
+
+1. **Pre-Paint Blocking Script**: An inline script in `<head>` runs before DOM elements or CSS are painted by the browser engine. It immediately checks `localStorage.getItem('genz_theme')` or system `prefers-color-scheme`, synchronizing `data-theme` and `.dark`/`.light` classes onto `document.documentElement`.
+2. **Hydration Mismatch Prevention**: The root `<html>` tag leverages `suppressHydrationWarning` to ensure smooth client reconciliation without hydration warnings.
+3. **Tailwind CSS v4 Strategy**: Configured via `@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));` ensuring synchronized CSS styling across all components.
+4. **Cloud & Local Synchronization**: The client uses `localStorage` as the immediate source of truth to avoid latency flashes while seamlessly saving changes back to the PostgreSQL database in the background.
 
 ---
 
@@ -140,6 +154,7 @@ GENZ-AI implements a resilient multi-provider video pipeline (`src/lib/ai/video.
 - **AI Backend**: [Ollama Cloud](https://ollama.com/) / Local Ollama
 - **Authentication**: Google OAuth 2.0 & Jose JWT sessions
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 - **Deployment**: [Vercel](https://vercel.com/)
 - **Version Control**: [GitHub](https://github.com/)
 
@@ -312,7 +327,7 @@ npx prisma studio
 - **`conversations`**: Chat thread metadata, model configurations, archive flags.
 - **`messages`**: Multi-turn history, roles (`user`, `assistant`, `system`), token metrics.
 - **`attachments`**: Media attachments (images, PDFs, documents, MP4 video records).
-- **`user_settings`**: Theme preferences, UI density, auto-scroll states.
+- **`user_settings`**: Theme preferences (`dark`, `light`, `system`), UI density, auto-scroll states.
 
 ---
 
@@ -386,16 +401,20 @@ genz-ai/
 │   │   │   ├── chat/              # Main streaming chat SSE handler
 │   │   │   ├── conversations/     # Conversation CRUD operations
 │   │   │   ├── upload/            # File attachment uploader
+│   │   │   ├── user/settings/     # User preferences & theme persistence
 │   │   │   └── voice/             # Speech transcription handler
 │   │   ├── auth/callback/         # Client-side OAuth callback redirect
 │   │   ├── globals.css            # Tailwind CSS & design tokens
-│   │   ├── layout.tsx             # Root application layout
+│   │   ├── layout.tsx             # Root layout with zero-flash theme head script
 │   │   └── page.tsx               # Main chat application page
 │   ├── components/
 │   │   ├── auth/                  # Authentication modals & sign-in buttons
 │   │   ├── chat/                  # ChatArea, MessageItem, ModelSelector, Composer
+│   │   ├── layout/                # AppShell container & state coordinator
+│   │   ├── search/                # SearchPanel conversation search modal (Ctrl+K)
 │   │   ├── settings/              # SettingsModal & preferences
-│   │   └── sidebar/               # Sidebar & ConversationList
+│   │   ├── sidebar/               # Collapsible desktop Sidebar & MobileSidebar
+│   │   └── ui/                    # Toast and reusable interactive controls
 │   ├── lib/
 │   │   ├── ai/
 │   │   │   ├── tools/
@@ -408,7 +427,8 @@ genz-ai/
 │   │   │   ├── video.ts           # Multi-provider AI video generation engine
 │   │   │   └── web_search.ts      # Web search execution & source parser
 │   │   ├── auth/                  # JWT session and Google OAuth utilities
-│   │   └── db/                    # Prisma database client singleton
+│   │   ├── db/                    # Prisma database client singleton
+│   │   └── theme.ts               # Zero-flash theme manager (dark/light/system)
 │   └── types/                     # TypeScript type declarations
 ├── .env.example                   # Environment configuration template
 ├── next.config.ts                 # Next.js configuration
@@ -428,15 +448,19 @@ genz-ai/
 - **Cause**: Incorrect database connection string, expired credentials, or missing SSL configuration.
 - **Solution**: Verify `DATABASE_URL` in `.env`. For Neon, ensure `?sslmode=require` is appended. Run `npx prisma db push` to verify database reachability.
 
-### 3. Ollama Authentication or Model Errors
+### 3. Theme Flash on Page Reload
+- **Cause**: Client theme was initialized only inside `useEffect()`, causing light mode to briefly paint before JavaScript runs.
+- **Solution**: GENZ-AI includes an inline blocking `<script>` in `<head>` inside [src/app/layout.tsx](file:///c:/murali/projects/genz-ai/src/app/layout.tsx) which reads `localStorage` and applies the theme class immediately before any DOM rendering.
+
+### 4. Ollama Authentication or Model Errors
 - **Cause**: Invalid `OLLAMA_API_KEY` for Ollama Cloud, or the requested model is not accessible.
 - **Solution**: Verify your API key at [ollama.com](https://ollama.com). If using local Ollama, ensure Ollama is running (`ollama serve`) and the model is pulled (`ollama pull gemma3:4b`).
 
-### 4. Video Provider Limits or Inactive Credits
+### 5. Video Provider Limits or Inactive Credits
 - **Cause**: Configured provider (e.g. Replicate) returned HTTP 402 (payment required) or rate limits.
 - **Solution**: The application automatically falls back to the **Free AI Video Studio** without interrupting chat. If you want direct MP4 rendering, verify credits in your Replicate dashboard or configure a self-hosted `VIDEO_API_URL`.
 
-### 5. Vercel Environment Variables Not Active
+### 6. Vercel Environment Variables Not Active
 - **Cause**: Environment variables were added in Vercel after the build, or redeployment was not triggered.
 - **Solution**: In Vercel Project Settings > Environment Variables, verify values for both **Preview** and **Production** environments, then trigger a redeploy.
 
@@ -444,4 +468,4 @@ genz-ai/
 
 ## License
 
-Add your preferred license here.
+MIT License. See [LICENSE](LICENSE) for details.

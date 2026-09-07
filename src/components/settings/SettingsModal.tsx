@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import { X, Moon, Sun, Monitor, Sparkles, MessageSquare, BarChart3, User } from "lucide-react";
 import { UserProfile, UserSettings } from "@/types/chat";
 import { AVAILABLE_MODELS } from "@/lib/ai/models";
+import { applyTheme, ThemeType } from "@/lib/theme";
 
 type TabType = "general" | "chat" | "account" | "usage";
-type ThemeType = "dark" | "light" | "system";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -55,9 +55,16 @@ export function SettingsModal({
 
   if (!isOpen) return null;
 
+  const handleThemeChange = (themeOptId: ThemeType) => {
+    setCurrentTheme(themeOptId);
+    applyTheme(themeOptId);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      applyTheme(currentTheme);
+
       await onSaveSettings(
         {
           theme: currentTheme,
@@ -149,7 +156,7 @@ export function SettingsModal({
                       <button
                         key={themeOpt.id}
                         type="button"
-                        onClick={() => setCurrentTheme(themeOpt.id as ThemeType)}
+                        onClick={() => handleThemeChange(themeOpt.id as ThemeType)}
                         className={`flex flex-col items-center justify-center p-3.5 rounded-xl border transition-all ${
                           isSelected
                             ? "bg-[var(--accent-glow)] border-[var(--accent-primary)] text-[var(--accent-primary)]"

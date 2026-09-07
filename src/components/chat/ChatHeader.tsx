@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, ChevronDown, Zap, Plus, Settings, Check, Search, Moon, Sun } from "lucide-react";
+import {
+  Menu,
+  ChevronDown,
+  Zap,
+  Plus,
+  Settings,
+  Check,
+  Search,
+  PanelLeft,
+} from "lucide-react";
 import { AVAILABLE_MODELS, ModelConfig } from "@/lib/ai/models";
 import { UserProfile } from "@/types/chat";
 
@@ -13,6 +22,8 @@ interface ChatHeaderProps {
   onOpenSettings: () => void;
   user?: UserProfile | null;
   onOpenSearch?: () => void;
+  isDesktopSidebarCollapsed?: boolean;
+  onToggleDesktopSidebar?: () => void;
 }
 
 export function ChatHeader({
@@ -23,6 +34,8 @@ export function ChatHeader({
   onOpenSettings,
   user,
   onOpenSearch,
+  isDesktopSidebarCollapsed = false,
+  onToggleDesktopSidebar,
 }: ChatHeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -42,44 +55,61 @@ export function ChatHeader({
   }, []);
 
   return (
-    <header className="h-12 sm:h-13 px-3 sm:px-4 border-b border-cyan-500/15 bg-[#060812]/85 backdrop-blur-xl flex items-center justify-between z-30 shrink-0 select-none shadow-[0_2px_15px_rgba(0,0,0,0.5)]">
+    <header className="h-12 sm:h-13 px-3 sm:px-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/90 backdrop-blur-xl flex items-center justify-between z-30 shrink-0 select-none transition-colors">
       <div className="flex items-center gap-2">
         {/* Mobile menu hamburger toggle */}
         <button
           type="button"
           onClick={onOpenMobileSidebar}
           aria-label="Open sidebar menu"
-          className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-purple-950/40 border border-transparent hover:border-purple-500/30 transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-400"
+          className="md:hidden p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
         >
           <Menu className="w-4 h-4" />
         </button>
+
+        {/* Desktop Sidebar Expand Toggle (shown when collapsed) */}
+        {isDesktopSidebarCollapsed && onToggleDesktopSidebar && (
+          <button
+            type="button"
+            onClick={onToggleDesktopSidebar}
+            title="Open sidebar"
+            aria-label="Open sidebar"
+            className="hidden md:flex p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Model Selector Dropdown with Lightning Badge */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen((prev) => !prev)}
-            className={`flex items-center gap-2 px-2.5 py-1 rounded-xl bg-purple-950/30 hover:bg-purple-900/40 border transition-all text-xs font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-400 ${
+            className={`flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-surface-hover)] border transition-all text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)] ${
               dropdownOpen
-                ? "border-cyan-400/60 shadow-[0_0_12px_rgba(0,240,255,0.25)] text-cyan-200"
-                : "border-purple-500/30 hover:border-cyan-500/40"
+                ? "border-[var(--accent-cyan)] shadow-[0_0_12px_var(--cyan-glow)] text-[var(--accent-cyan)]"
+                : "border-[var(--border-subtle)] hover:border-[var(--accent-primary)]"
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span className="text-slate-100">{activeModel.name}</span>
+              <span>{activeModel.name}</span>
               {/* Lightning Badge */}
-              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 shadow-[0_0_6px_rgba(0,240,255,0.3)]">
-                <Zap className="w-2.5 h-2.5 fill-cyan-400 text-cyan-400" />
+              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--accent-glow)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30">
+                <Zap className="w-2.5 h-2.5 fill-current" />
                 <span>{activeModel.badge}</span>
               </span>
             </span>
-            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+            <ChevronDown
+              className={`w-3 h-3 text-[var(--text-muted)] transition-transform duration-200 ${
+                dropdownOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-72 rounded-2xl bg-[#0c0f20] border border-purple-500/40 shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 z-50 animate-in fade-in zoom-in-95">
-              <div className="px-3 py-1.5 text-[10px] font-mono font-semibold text-cyan-400/80 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_#00f0ff]" />
+            <div className="absolute top-full left-0 mt-2 w-72 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 text-[10px] font-mono font-semibold text-[var(--accent-cyan)] uppercase tracking-widest flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-cyan)] shadow-[0_0_4px_var(--accent-cyan)]" />
                 <span>NEURAL ENGINE</span>
               </div>
               <div className="space-y-1 mt-1">
@@ -95,19 +125,27 @@ export function ChatHeader({
                       }}
                       className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 border ${
                         isSelected
-                          ? "bg-purple-950/50 border-purple-500/50 text-white shadow-[0_0_12px_rgba(168,85,247,0.2)]"
-                          : "border-transparent hover:bg-purple-950/30 text-slate-400 hover:text-slate-200"
+                          ? "bg-[var(--accent-glow)] border-[var(--accent-primary)]/50 text-[var(--text-primary)] shadow-xs"
+                          : "border-transparent hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
                       <div className="mt-0.5">
-                        <Zap className={`w-3.5 h-3.5 ${isSelected ? "text-cyan-400 fill-cyan-400 drop-shadow-[0_0_6px_#00f0ff]" : "text-slate-500"}`} />
+                        <Zap
+                          className={`w-3.5 h-3.5 ${
+                            isSelected
+                              ? "text-[var(--accent-cyan)] fill-[var(--accent-cyan)]"
+                              : "text-[var(--text-muted)]"
+                          }`}
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold">{model.name}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+                          )}
                         </div>
-                        <p className="text-[11px] text-slate-400 leading-tight mt-0.5 font-mono">
+                        <p className="text-[11px] text-[var(--text-muted)] leading-tight mt-0.5 font-mono">
                           {model.description}
                         </p>
                       </div>
@@ -126,11 +164,11 @@ export function ChatHeader({
         <button
           type="button"
           onClick={onOpenSearch || onOpenMobileSidebar}
-          title="Search"
+          title="Search conversations (Ctrl+K)"
           aria-label="Search conversations"
-          className="p-1.5 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-purple-950/40 border border-transparent hover:border-purple-500/30 transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-400"
+          className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
         >
-          <Search className="w-3.5 h-3.5" />
+          <Search className="w-4 h-4" />
         </button>
 
         {/* Compact New Chat */}
@@ -139,21 +177,21 @@ export function ChatHeader({
           onClick={onNewChat}
           title="New Chat"
           aria-label="New chat"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-purple-950/30 hover:bg-purple-900/50 border border-purple-500/30 hover:border-cyan-400/40 transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-400"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium text-[var(--text-primary)] bg-[var(--bg-card)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)] shadow-xs"
         >
-          <Plus className="w-3.5 h-3.5 text-cyan-400" />
+          <Plus className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
           <span className="hidden sm:inline font-mono text-[11px]">NEW CHAT</span>
         </button>
 
-        {/* Theme/Settings */}
+        {/* Settings */}
         <button
           type="button"
           onClick={onOpenSettings}
           title="Settings"
           aria-label="Open settings"
-          className="p-1.5 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-purple-950/40 border border-transparent hover:border-purple-500/30 transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-400"
+          className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Settings className="w-4 h-4" />
         </button>
 
         {/* User Avatar */}
@@ -164,7 +202,7 @@ export function ChatHeader({
             tabIndex={0}
             title={user.name || user.email}
             aria-label="User settings"
-            className="ml-1 cursor-pointer w-6 h-6 rounded-full ring-1 ring-cyan-400/50 hover:ring-cyan-400 shadow-[0_0_8px_rgba(0,240,255,0.25)] overflow-hidden bg-purple-950/80 flex items-center justify-center text-[10px] font-bold text-cyan-300 transition-all"
+            className="ml-1 cursor-pointer w-6 h-6 rounded-full ring-1 ring-[var(--accent-cyan)]/50 hover:ring-[var(--accent-cyan)] shadow-xs overflow-hidden bg-[var(--accent-glow)] flex items-center justify-center text-[10px] font-bold text-[var(--accent-cyan)] transition-all"
           >
             {user.avatarUrl ? (
               <img
@@ -182,4 +220,3 @@ export function ChatHeader({
     </header>
   );
 }
-

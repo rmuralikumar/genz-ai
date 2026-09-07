@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-:root {
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
   --bg-app: #060810;
   --bg-surface: #0a0e1c;
   --bg-surface-hover: #12182c;
@@ -29,33 +34,43 @@
   --code-border: rgba(0, 240, 255, 0.15);
 }
 
-[data-theme="light"] {
-  --bg-app: #0b0e1b;
-  --bg-surface: #101528;
-  --bg-surface-hover: #18203a;
-  --bg-sidebar: #080a14;
-  --bg-card: #12182f;
-  --border-subtle: rgba(168, 85, 247, 0.18);
-  --border-focus: rgba(0, 240, 255, 0.6);
+[data-theme="light"],
+.light {
+  color-scheme: light;
+  --bg-app: #f8f9fc;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f3f9;
+  --bg-sidebar: #f0f2f8;
+  --bg-card: #ffffff;
+  --border-subtle: rgba(148, 163, 184, 0.28);
+  --border-focus: rgba(147, 51, 234, 0.6);
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --text-muted: #64748b;
   
-  --accent-primary: #a855f7;
-  --accent-primary-hover: #9333ea;
-  --accent-cyan: #00f0ff;
-  --accent-cyan-hover: #00d2e0;
-  --accent-pink: #ff2a85;
-  --accent-glow: rgba(168, 85, 247, 0.2);
-  --cyan-glow: rgba(0, 240, 255, 0.25);
+  --accent-primary: #8b5cf6;
+  --accent-primary-hover: #7c3aed;
+  --accent-cyan: #0891b2;
+  --accent-cyan-hover: #0e7490;
+  --accent-pink: #db2777;
+  --accent-glow: rgba(139, 92, 246, 0.12);
+  --cyan-glow: rgba(8, 145, 178, 0.15);
   
-  --user-msg-bg: rgba(88, 28, 135, 0.45);
-  --user-msg-text: #f5f3ff;
-  --bot-msg-bg: rgba(10, 14, 28, 0.7);
+  --user-msg-bg: rgba(139, 92, 246, 0.08);
+  --user-msg-text: #1e1b4b;
+  --bot-msg-bg: #ffffff;
   
-  --code-bg: #04050a;
-  --code-border: rgba(0, 240, 255, 0.15);
+  --code-bg: #090d1c;
+  --code-border: rgba(148, 163, 184, 0.25);
+}
+
+[data-theme="light"] .synthwave-grid {
+  opacity: 0.15 !important;
+}
+
+[data-theme="light"] .retro-scanlines {
+  display: none !important;
 }
 
 html,
@@ -144,7 +159,7 @@ body {
 .prose-genz h2,
 .prose-genz h3,
 .prose-genz h4 {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-top: 1.35rem;
@@ -152,16 +167,16 @@ body {
 }
 .prose-genz h1 { 
   font-size: 1.45rem; 
-  color: #00f0ff;
-  text-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+  color: var(--accent-cyan);
+  text-shadow: 0 0 12px var(--cyan-glow);
 }
 .prose-genz h2 { 
   font-size: 1.25rem; 
-  color: #c084fc;
+  color: var(--accent-primary);
 }
 .prose-genz h3 { 
   font-size: 1.1rem; 
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 .prose-genz ul {
   list-style-type: disc;
@@ -177,12 +192,12 @@ body {
   margin-bottom: 0.4rem;
 }
 .prose-genz blockquote {
-  border-left: 3px solid #00f0ff;
+  border-left: 3px solid var(--accent-cyan);
   padding-left: 0.9rem;
   font-style: italic;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin: 0.9rem 0;
-  background: rgba(0, 240, 255, 0.03);
+  background: var(--cyan-glow);
   padding-top: 0.35rem;
   padding-bottom: 0.35rem;
   border-radius: 0 0.5rem 0.5rem 0;
@@ -196,36 +211,35 @@ body {
 }
 .prose-genz th,
 .prose-genz td {
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  border: 1px solid var(--border-subtle);
   padding: 0.55rem 0.85rem;
   text-align: left;
 }
 .prose-genz th {
-  background-color: rgba(10, 14, 28, 0.85);
-  color: #00f0ff;
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .prose-genz td {
-  background-color: rgba(6, 8, 16, 0.5);
+  background-color: var(--bg-surface);
 }
 .prose-genz a {
-  color: #00f0ff;
+  color: var(--accent-cyan);
   text-decoration: underline;
   text-underline-offset: 3px;
   transition: color 0.15s ease;
 }
 .prose-genz a:hover {
-  color: #38bdf8;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  color: var(--accent-cyan-hover);
 }
 .prose-genz inline-code,
 .prose-genz code:not([class*="language-"]) {
-  background: rgba(168, 85, 247, 0.12);
-  color: #00f0ff;
-  border: 1px solid rgba(0, 240, 255, 0.2);
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+  border: 1px solid var(--border-subtle);
   padding: 0.15rem 0.4rem;
   border-radius: 0.3rem;
   font-size: 0.85em;

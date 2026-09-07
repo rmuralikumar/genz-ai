@@ -33,7 +33,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full antialiased" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" className="h-full antialiased dark" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  try {
+    var savedTheme = localStorage.getItem('genz_theme');
+    var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = savedTheme;
+    if (!theme || theme === 'system') {
+      theme = supportDarkMode ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  } catch (e) {}
+})();
+`,
+          }}
+        />
+      </head>
       <body className="h-full flex flex-col m-0 p-0 overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]">
         {children}
       </body>

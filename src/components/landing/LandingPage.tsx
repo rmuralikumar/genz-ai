@@ -48,8 +48,10 @@ export function LandingPage() {
       }
 
       if (urlAuthError) {
-        setAuthError(decodeURIComponent(urlAuthError));
-        setAuthModalOpen(true);
+        requestAnimationFrame(() => {
+          setAuthError(decodeURIComponent(urlAuthError));
+          setAuthModalOpen(true);
+        });
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }

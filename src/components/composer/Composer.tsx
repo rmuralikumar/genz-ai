@@ -124,18 +124,18 @@ export function Composer({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative rounded-3xl bg-[#090d1e]/85 backdrop-blur-2xl border transition-all duration-300 overflow-hidden shadow-[0_10px_35px_rgba(0,0,0,0.7)] ${
+        className={`relative rounded-3xl bg-[var(--bg-surface)]/95 backdrop-blur-2xl border transition-all duration-300 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.2)] ${
           isDragging
-            ? "border-cyan-400 ring-2 ring-cyan-400/50 bg-purple-950/30 shadow-[0_0_30px_rgba(0,240,255,0.35)]"
-            : "border-purple-500/35 hover:border-cyan-500/50 focus-within:border-cyan-400 focus-within:shadow-[0_0_25px_rgba(0,240,255,0.25),inset_0_0_15px_rgba(168,85,247,0.08)]"
+            ? "border-[var(--accent-cyan)] ring-2 ring-[var(--accent-cyan)]/50 bg-[var(--accent-glow)] shadow-[0_0_30px_var(--cyan-glow)]"
+            : "border-[var(--border-subtle)] hover:border-[var(--accent-primary)]/50 focus-within:border-[var(--accent-cyan)] focus-within:shadow-[0_0_20px_var(--cyan-glow)]"
         }`}
       >
         {/* Holographic Top Edge Highlight */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent-cyan)]/40 to-transparent pointer-events-none" />
 
         {/* Drag and drop overlay */}
         {isDragging && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/85 backdrop-blur-md pointer-events-none">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-md pointer-events-none">
             <div className="flex items-center gap-2 text-sm font-semibold text-cyan-300 animate-pulse">
               <Sparkles className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_#00f0ff]" />
               <span>DROP FILES OR IMAGES TO INGEST</span>
@@ -145,9 +145,9 @@ export function Composer({
 
         {/* Editing banner */}
         {initialValue && (
-          <div className="flex items-center justify-between px-4 py-1.5 bg-purple-950/60 border-b border-purple-500/30 text-xs text-slate-300">
-            <span className="font-mono text-cyan-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+          <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--accent-glow)] border-b border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
+            <span className="font-mono text-[var(--accent-cyan)] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-cyan)] animate-ping" />
               EDITING MESSAGE DIRECTIVE
             </span>
             <button
@@ -156,7 +156,7 @@ export function Composer({
                 setContent("");
                 onCancelEdit?.();
               }}
-              className="p-1 text-slate-400 hover:text-white rounded transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
               title="Cancel edit"
             >
               <X className="w-3.5 h-3.5" />
@@ -170,25 +170,25 @@ export function Composer({
             {attachments.map((att, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#0c1024] border border-purple-500/35 text-xs text-slate-200 shadow-sm animate-in fade-in"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] shadow-xs animate-in fade-in"
               >
                 {att.mimeType.startsWith("image/") ? (
-                  <div className="w-4 h-4 rounded overflow-hidden bg-black/50 flex items-center justify-center shrink-0 ring-1 ring-cyan-400/30">
+                  <div className="w-4 h-4 rounded overflow-hidden bg-black/50 flex items-center justify-center shrink-0 ring-1 ring-[var(--accent-cyan)]/30">
                     <img src={att.url} alt={att.filename} className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <FileText className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-[var(--accent-cyan)] shrink-0" />
                 )}
                 <span className="truncate max-w-[140px] font-mono text-[11px]">
                   {att.filename}
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">
+                <span className="text-[10px] text-[var(--text-muted)] font-mono">
                   ({Math.round(att.size / 1024)}KB)
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveAttachment(i)}
-                  className="ml-1 p-0.5 rounded hover:bg-purple-950 text-slate-400 hover:text-pink-400 transition-colors"
+                  className="ml-1 p-0.5 rounded hover:bg-[var(--bg-surface-hover)] text-[var(--text-muted)] hover:text-pink-500 transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -205,7 +205,7 @@ export function Composer({
           onKeyDown={handleKeyDown}
           placeholder="Message GENZ-AI..."
           rows={1}
-          className="w-full px-4 pt-3.5 pb-2 bg-transparent text-slate-100 placeholder-slate-500 resize-none outline-none text-[15px] leading-relaxed max-h-[200px] overflow-y-auto selection:bg-cyan-500/25 selection:text-cyan-200"
+          className="w-full px-4 pt-3.5 pb-2 bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] resize-none outline-none text-[15px] leading-relaxed max-h-[200px] overflow-y-auto selection:bg-purple-500/25 selection:text-cyan-200"
         />
 
         {/* Bottom Floating Control Bar */}
@@ -220,7 +220,7 @@ export function Composer({
               disabled={isGenerating}
             />
             {/* Model Indicator Pill */}
-            <span className="text-[10px] font-mono tracking-wider text-cyan-400/80 px-2 py-0.5 rounded-md bg-cyan-950/40 border border-cyan-500/20 select-none hidden sm:inline-block">
+            <span className="text-[10px] font-mono tracking-wider text-[var(--accent-cyan)] px-2 py-0.5 rounded-md bg-[var(--accent-glow)] border border-[var(--accent-cyan)]/20 select-none hidden sm:inline-block">
               {modelName}
             </span>
           </div>

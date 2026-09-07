@@ -145,16 +145,16 @@ export function MessageList({
                   key={idx}
                   onClick={() => onSelectStarter?.(item.prompt)}
                   type="button"
-                  className="p-3.5 rounded-2xl bg-[#090d1c]/80 hover:bg-[#0f142b] border border-purple-500/25 hover:border-cyan-400/60 transition-all duration-200 text-left group shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] flex flex-col justify-between"
+                  className="p-3.5 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] hover:border-[var(--accent-cyan)]/50 transition-all duration-200 text-left group shadow-xs hover:shadow-md flex flex-col justify-between"
                 >
                   <div>
-                    <div className="p-2 rounded-xl bg-purple-950/50 border border-purple-500/30 w-fit mb-3 text-cyan-400 group-hover:text-cyan-200 group-hover:border-cyan-400/50 group-hover:shadow-[0_0_10px_rgba(0,240,255,0.3)] transition-all">
+                    <div className="p-2 rounded-xl bg-[var(--accent-glow)] border border-[var(--accent-primary)]/30 w-fit mb-3 text-[var(--accent-cyan)] group-hover:border-[var(--accent-cyan)]/50 transition-all">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="font-semibold text-xs text-slate-200 group-hover:text-white mb-1 tracking-wide">
+                    <div className="font-semibold text-xs text-[var(--text-primary)] mb-1 tracking-wide">
                       {item.title}
                     </div>
-                    <div className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                    <div className="text-[11px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
                       {item.desc}
                     </div>
                   </div>
@@ -206,25 +206,25 @@ export function MessageList({
             }
 
             return (
-              <div className="py-4 sm:py-5 px-3 sm:px-4 md:px-6 bg-[#070915]/50 border-y border-purple-500/15 flex justify-start animate-in fade-in duration-200">
+              <div className="py-4 sm:py-5 px-3 sm:px-4 md:px-6 bg-[var(--bg-surface-hover)]/30 border-y border-[var(--border-subtle)]/30 flex justify-start animate-in fade-in duration-200">
                 <div className="w-full max-w-3xl mx-auto flex gap-3 sm:gap-3.5 flex-row justify-start">
-                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-black border border-purple-500/40 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.35)] flex items-center justify-center shrink-0 select-none">
-                    <Bot className="w-4 h-4 text-cyan-300" />
+                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-subtle)] ring-1 ring-[var(--accent-cyan)]/50 shadow-xs flex items-center justify-center shrink-0 select-none">
+                    <Bot className="w-4 h-4 text-[var(--accent-cyan)]" />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col items-start text-left">
                     <div className="flex items-center gap-2 mb-2 select-none flex-wrap">
-                      <span className="text-xs font-semibold tracking-wider text-slate-200">
+                      <span className="text-xs font-semibold tracking-wider text-[var(--text-secondary)]">
                         GENZ-AI
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-md bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shadow-[0_0_6px_rgba(0,240,255,0.2)]">
+                      <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-glow)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30">
                         <span>{badgeLabel}</span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 py-1 text-slate-400 text-sm font-mono">
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff] animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#a855f7] animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff] animate-bounce" />
-                      <span className="ml-2 text-xs text-cyan-300/80">
+                    <div className="flex items-center gap-1.5 py-1 text-[var(--text-muted)] text-sm font-mono">
+                      <span className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] shadow-[0_0_8px_var(--accent-cyan)] animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-primary)] animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] shadow-[0_0_8px_var(--accent-cyan)] animate-bounce" />
+                      <span className="ml-2 text-xs text-[var(--accent-cyan)]">
                         {statusLabel}
                       </span>
                     </div>
@@ -295,7 +295,7 @@ export function MessageList({
           onClick={() => scrollToBottom("smooth")}
           type="button"
           aria-label="Scroll to bottom"
-          className="sticky bottom-4 self-center p-2 rounded-full bg-[#0a0d1e]/90 hover:bg-[#121832] text-cyan-400 hover:text-cyan-200 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-all hover:scale-105 active:scale-95 focus:outline-none z-20"
+          className="sticky bottom-4 self-center p-2 rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-surface-hover)] text-[var(--accent-cyan)] border border-[var(--border-subtle)] shadow-md transition-all hover:scale-105 active:scale-95 focus:outline-none z-20"
         >
           <ArrowDown className="w-4 h-4 stroke-[2.5]" />
         </button>
