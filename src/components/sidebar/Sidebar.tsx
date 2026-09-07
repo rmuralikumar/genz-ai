@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   SquarePen,
   Image as ImageIcon,
@@ -279,7 +280,9 @@ export function Sidebar({
     <aside className="w-64 h-full bg-[#050711]/90 backdrop-blur-xl border-r border-purple-500/20 shadow-[4px_0_24px_rgba(0,0,0,0.5)] flex flex-col justify-between select-none relative z-20">
       {/* Top Branding */}
       <div className="pt-3.5 px-3 pb-2 flex items-center justify-between border-b border-purple-500/15">
-        <Logo size="sm" showText={true} />
+        <Link href="/" title="GENZ-AI Home" className="hover:opacity-90 transition-opacity">
+          <Logo size="sm" showText={true} />
+        </Link>
         {/* Compact Search Toggle Icon */}
         <button
           type="button"

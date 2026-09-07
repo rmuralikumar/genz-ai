@@ -1,11 +1,12 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { LandingPage } from "@/components/landing/LandingPage";
+import { Metadata } from "next";
 
-export const metadata = {
-  title: "GENZ-AI — Your Modern AI Assistant",
+export const metadata: Metadata = {
+  title: "GENZ-AI — Your AI. One Powerful Workspace.",
   description:
-    "A state-of-the-art conversational AI application engineered for speed, reasoning, and beautiful responsive experience across mobile and desktop.",
+    "An intelligent conversational workspace unifying AI chat, image generation, web search, deep research, file analysis, vision, voice transcription, and multi-tier video generation.",
 };
 
 export default function HomePage() {
-  return <AppShell />;
+  return <LandingPage />;
 }
